@@ -109,8 +109,14 @@
     </a-scene>
     
     <script>
-        // Get photo ID from URL path: /photo/1/ or /photo/1
+        // Get photo ID from URL: /photo/1/ or /photo/?id=1
         function getPhotoId() {
+            // Try URL parameter first (for local testing)
+            const urlParams = new URLSearchParams(window.location.search);
+            const idParam = urlParams.get('id');
+            if (idParam) return idParam;
+            
+            // Try path-based ID (for production with URL rewrite)
             const path = window.location.pathname;
             const match = path.match(/\/photo\/(\d+)/);
             return match ? match[1] : null;

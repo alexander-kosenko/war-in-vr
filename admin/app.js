@@ -287,8 +287,8 @@ function showSuccessWithQR(photoId) {
     const successSection = document.getElementById('successSection');
     successSection.classList.add('active');
     
-    // Set photo URL
-    const photoUrl = `${CONFIG.SITE_URL}/photo/${photoId}/`;
+    // Set photo URL - use query parameter for compatibility
+    const photoUrl = `${CONFIG.SITE_URL}/photo/?id=${photoId}`;
     document.getElementById('photoUrl').textContent = photoUrl;
     
     // Generate QR code
