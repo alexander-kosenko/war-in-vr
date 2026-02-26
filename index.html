@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="War in VR - Virtual Reality documentation of war">
+    <title>War in VR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .quote {
+            font-size: 1.5rem;
+            font-weight: 300;
+            line-height: 1.6;
+            margin-bottom: 3rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            font-style: italic;
+            opacity: 0.9;
+        }
+        
+        .scenes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .scene-link {
+            display: block;
+            padding: 2rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            text-decoration: none;
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .scene-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .scene-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .quote {
+                font-size: 1.2rem;
+            }
+            
+            .scenes-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>War in VR</h1>
+        <p class="quote">Mankind must put an end to war or war will put an end to mankind.</p>
+        
+        <div class="scenes-grid">
+            <a href="1/" class="scene-link">
+                <span class="scene-number">01</span>
+                Scene
+            </a>
+            <a href="2/" class="scene-link">
+                <span class="scene-number">02</span>
+                Scene
+            </a>
+            <a href="3/" class="scene-link">
+                <span class="scene-number">03</span>
+                Scene
+            </a>
+            <a href="4/" class="scene-link">
+                <span class="scene-number">04</span>
+                Scene
+            </a>
+            <a href="5/" class="scene-link">
+                <span class="scene-number">05</span>
+                Scene
+            </a>
+            <a href="6/" class="scene-link">
+                <span class="scene-number">06</span>
+                Scene
+            </a>
+            <a href="7/" class="scene-link">
+                <span class="scene-number">07</span>
+                Scene
+            </a>
+            <a href="8/" class="scene-link">
+                <span class="scene-number">08</span>
+                Scene
+            </a>
+            <a href="11/" class="scene-link">
+                <span class="scene-number">11</span>
+                Scene
+            </a>
+            <a href="12/" class="scene-link">
+                <span class="scene-number">12</span>
+                Scene
+            </a>
+            <a href="20/" class="scene-link">
+                <span class="scene-number">20</span>
+                Scene
+            </a>
+        </div>
+    </div>
+</body>
+</html>

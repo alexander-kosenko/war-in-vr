@@ -1,0 +1,39 @@
+# Cloudflare Pages configuration for War in VR
+
+name = "war-in-vr"
+compatibility_date = "2024-01-01"
+
+# ========================
+# ІНСТРУКЦІЯ З НАЛАШТУВАННЯ
+# ========================
+# 
+# 1. Встановіть Wrangler CLI:
+#    npm install -g wrangler
+#
+# 2. Увійдіть в Cloudflare:
+#    wrangler login
+#
+# 3. Створіть R2 bucket:
+#    wrangler r2 bucket create warinvr-panoramas
+#
+# 4. Отримайте API credentials:
+#    - Зайдіть в Cloudflare Dashboard
+#    - R2 → Manage R2 API Tokens
+#    - Create API Token
+#    - Скопіюйте Access Key ID та Secret Access Key
+#
+# 5. Оновіть admin/app.js з вашими credentials
+#
+# 6. Деплой на Cloudflare Pages:
+#    - Зайдіть на pages.cloudflare.com
+#    - Create a project → Connect to Git (або Upload assets)
+#    - Виберіть цю папку
+#    - Build settings: None (static site)
+#    - Deploy!
+#
+# ========================
+
+# Production environment
+[env.production]
+# Тут будуть налаштування для production
+# Додасться після створення R2 bucket
