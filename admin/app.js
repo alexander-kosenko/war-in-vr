@@ -3,13 +3,14 @@ const CONFIG = {
     // Пароль для доступу до адмін панелі - ЗМІНІТЬ ЦЕ!
     ADMIN_PASSWORD: 'war-in-vr-2024',
     
-    // Cloudflare R2 налаштування
-    R2_ENDPOINT: 'https://61c36404c5fefc47469062825042a5d9.r2.cloudflarestorage.com',
-    R2_BUCKET: 'warinvr-panoramas',
+    // Upload режим: 'LOCAL' або 'WORKER'
+    // LOCAL - завантажує файли на комп'ютер (потім upload через CLI)
+    // WORKER - автоматично завантажує в R2 через Cloudflare Worker
+    UPLOAD_MODE: 'LOCAL',
     
-    // ⚠️ УВАГА: Не зберігайте credentials в клієнтському коді!
-    // Для production використовуйте Cloudflare Worker або AWS CLI
-    // Зараз файли завантажуються локально для безпеки
+    // Cloudflare Worker URL (встановіть після deploy Worker)
+    // Інструкція: worker/README.md
+    WORKER_URL: '', // 'https://war-in-vr-upload.YOUR-SUBDOMAIN.workers.dev'
     
     // Public URL для доступу до файлів
     PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev'
@@ -166,29 +167,54 @@ async function compressImage(file, options) {
 }
 
 async function uploadToR2(sceneId, blobs) {
-    // ВАЖЛИВО: Ця функція потребує налаштування Cloudflare R2 credentials
-    // Після створення R2 bucket, замініть цю функцію на реальний upload
-    
-    // Для тестування - симуляція завантаження
-    console.log('Uploading to R2:', {
-        sceneId,
-        mobile: blobs.mobile.size,
-        desktop: blobs.desktop.size,
-        vr: blobs.vr.size
-    });
-
-    // TODO: Реалізувати реальний upload після налаштування R2
-    // Варіанти:
-    // 1. Використати AWS SDK для S3 (R2 S3-compatible)
-    // 2. Використати Cloudflare Workers для проксі-upload
-    // 3. Використати presigned URLs
-    
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Симуляція
-    
-    // Тимчасово: зберігаємо локально для тестування
-    downloadBlob(blobs.mobile, `scene-${sceneId}-mobile.webp`);
-    downloadBlob(blobs.desktop, `scene-${sceneId}-desktop.webp`);
-    downloadBlob(blobs.vr, `scene-${sceneId}-vr.jpg`);
+    if (CONFIG.UPLOAD_MODE === 'WORKER') {
+        // Автоматичний upload через Cloudflare Worker
+        if (!CONFIG.WORKER_URL) {
+            throw new Error('WORKER_URL не налаштований! Встановіть URL Worker в CONFIG або змініть режим на LOCAL.');
+        }
+        
+        console.log('Uploading to R2 via Worker:', sceneId);
+        
+        const formData = new FormData();
+        formData.append('password', CONFIG.ADMIN_PASSWORD);
+        formData.append('sceneId', sceneId);
+        formData.append('mobile', blobs.mobile, `scene-${sceneId}-mobile.webp`);
+        formData.append('desktop', blobs.desktop, `scene-${sceneId}-desktop.webp`);
+        formData.append('vr', blobs.vr, `scene-${sceneId}-vr.jpg`);
+        
+        const response = await fetch(CONFIG.WORKER_URL, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+        
+        const result = await response.json();
+        console.log('Upload success:', result);
+        
+        return result;
+        
+    } else {
+        // LOCAL режим - завантажуємо файли на комп'ютер
+        console.log('Downloading files locally (LOCAL mode):', {
+            sceneId,
+            mobile: blobs.mobile.size,
+            desktop: blobs.desktop.size,
+            vr: blobs.vr.size
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Завантажуємо на комп'ютер
+        downloadBlob(blobs.mobile, `scene-${sceneId}-mobile.webp`);
+        downloadBlob(blobs.desktop, `scene-${sceneId}-desktop.webp`);
+        downloadBlob(blobs.vr, `scene-${sceneId}-vr.jpg`);
+        
+        console.log('Файли завантажені! Тепер upload через: ./admin/upload-to-r2.sh ' + sceneId + ' scene-' + sceneId + '-mobile.webp scene-' + sceneId + '-desktop.webp scene-' + sceneId + '-vr.jpg');
+    }
 }
 
 // Helper function to download processed images (for testing)
