@@ -1,16 +1,18 @@
-// Configuration - НАЛАШТУЙТЕ ЦІ ЗНАЧЕННЯ ПІСЛЯ СТВОРЕННЯ R2 BUCKET
+// Configuration
 const CONFIG = {
-    // Тимчасовий пароль - ЗМІНІТЬ ЦЕ!
+    // Пароль для доступу до адмін панелі - ЗМІНІТЬ ЦЕ!
     ADMIN_PASSWORD: 'war-in-vr-2024',
     
-    // Cloudflare R2 credentials - отримаєте після створення bucket
-    R2_ENDPOINT: 'https://YOUR-ACCOUNT-ID.r2.cloudflarestorage.com',
+    // Cloudflare R2 налаштування
+    R2_ENDPOINT: 'https://61c36404c5fefc47469062825042a5d9.r2.cloudflarestorage.com',
     R2_BUCKET: 'warinvr-panoramas',
-    R2_ACCESS_KEY_ID: 'YOUR_ACCESS_KEY_ID',
-    R2_SECRET_ACCESS_KEY: 'YOUR_SECRET_ACCESS_KEY',
     
-    // Public URL для доступу до файлів (через R2.dev або custom domain)
-    PUBLIC_URL: 'https://YOUR-BUCKET.r2.dev'
+    // ⚠️ УВАГА: Не зберігайте credentials в клієнтському коді!
+    // Для production використовуйте Cloudflare Worker або AWS CLI
+    // Зараз файли завантажуються локально для безпеки
+    
+    // Public URL для доступу до файлів
+    PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev'
 };
 
 let selectedFile = null;
