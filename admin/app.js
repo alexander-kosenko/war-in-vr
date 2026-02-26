@@ -1,23 +1,25 @@
 // Configuration
 const CONFIG = {
-    // Пароль для доступу до адмін панелі - ЗМІНІТЬ ЦЕ!
     ADMIN_PASSWORD: 'war-in-vr-2024',
-    
-    // Upload режим: 'LOCAL' або 'WORKER'
-    // LOCAL - завантажує файли на комп'ютер (потім upload через CLI)
-    // WORKER - автоматично завантажує в R2 через Cloudflare Worker
-    UPLOAD_MODE: 'LOCAL',
-    
-    // Cloudflare Worker URL (встановіть після deploy Worker)
-    // Інструкція: worker/README.md
-    WORKER_URL: '', // 'https://war-in-vr-upload.YOUR-SUBDOMAIN.workers.dev'
-    
-    // Public URL для доступу до файлів
-    PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev'
+    UPLOAD_MODE: 'LOCAL', // 'LOCAL' або 'WORKER'
+    WORKER_URL: '', // для WORKER режиму
+    R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
+    SITE_URL: window.location.origin // https://vr-photo.pages.dev
 };
 
 let selectedFile = null;
 let isAuthenticated = false;
+let currentQRCode = null;
+
+// Photo ID preview
+document.addEventListener('DOMContentLoaded', function() {
+    const photoIdInput = document.getElementById('photoId');
+    if (photoIdInput) {
+        photoIdInput.addEventListener('input', function() {
+            document.getElementById('photoIdPreview').textContent = this.value || '1';
+        });
+    }
+});
 
 // Authentication
 function authenticate() {
@@ -94,7 +96,12 @@ async function processAndUpload() {
         return;
     }
 
-    const sceneId = document.getElementById('sceneSelect').value;
+    const photoId = document.getElementById('photoId').value;
+    if (!photoId || photoId < 1) {
+        showAlert('Введіть коректний номер фото', 'error');
+        return;
+    }
+
     const uploadBtn = document.getElementById('uploadBtn');
     const progressSection = document.getElementById('progressSection');
     
@@ -137,14 +144,16 @@ async function processAndUpload() {
 
         // Upload to R2
         updateProgress(80, 'Завантаження на сервер...');
-        await uploadToR2(sceneId, {
+        await uploadToR2(photoId, {
             mobile: mobileBlob,
             desktop: desktopBlob,
             vr: vrBlob
         });
 
         updateProgress(100, 'Готово! ✓');
-        showAlert(`Сцена ${sceneId} успішно оновлена!`, 'success');
+        
+        // Show success with QR code
+        showSuccessWithQR(photoId);
         
         setTimeout(() => {
             resetForm();
@@ -200,7 +209,7 @@ async function uploadToR2(sceneId, blobs) {
     } else {
         // LOCAL режим - завантажуємо файли на комп'ютер
         console.log('Downloading files locally (LOCAL mode):', {
-            sceneId,
+            photoId,
             mobile: blobs.mobile.size,
             desktop: blobs.desktop.size,
             vr: blobs.vr.size
@@ -209,11 +218,11 @@ async function uploadToR2(sceneId, blobs) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Завантажуємо на комп'ютер
-        downloadBlob(blobs.mobile, `scene-${sceneId}-mobile.webp`);
-        downloadBlob(blobs.desktop, `scene-${sceneId}-desktop.webp`);
-        downloadBlob(blobs.vr, `scene-${sceneId}-vr.jpg`);
+        downloadBlob(blobs.mobile, `photo-${photoId}-mobile.webp`);
+        downloadBlob(blobs.desktop, `photo-${photoId}-desktop.webp`);
+        downloadBlob(blobs.vr, `photo-${photoId}-vr.jpg`);
         
-        console.log('Файли завантажені! Тепер upload через: ./admin/upload-to-r2.sh ' + sceneId + ' scene-' + sceneId + '-mobile.webp scene-' + sceneId + '-desktop.webp scene-' + sceneId + '-vr.jpg');
+        console.log('Файли завантажені! Тепер upload через: ./admin/upload-to-r2.sh ' + photoId + ' photo-' + photoId + '-mobile.webp photo-' + photoId + '-desktop.webp photo-' + photoId + '-vr.jpg');
     }
 }
 
@@ -267,6 +276,89 @@ function resetForm() {
     updateVersionStatus('statusMobile', 'pending');
     updateVersionStatus('statusDesktop', 'pending');
     updateVersionStatus('statusVr', 'pending');
+}
+
+// QR Code functions
+function showSuccessWithQR(photoId) {
+    // Hide upload section
+    document.getElementById('uploadSection').classList.remove('active');
+    
+    // Show success section
+    const successSection = document.getElementById('successSection');
+    successSection.classList.add('active');
+    
+    // Set photo URL
+    const photoUrl = `${CONFIG.SITE_URL}/photo/${photoId}/`;
+    document.getElementById('photoUrl').textContent = photoUrl;
+    
+    // Generate QR code
+    const qrContainer = document.getElementById('qrcode');
+    qrContainer.innerHTML = ''; // Clear previous QR
+    
+    currentQRCode = new QRCode(qrContainer, {
+        text: photoUrl,
+        width: 512,
+        height: 512,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H // High error correction
+    });
+}
+
+function downloadQR(format) {
+    const qrContainer = document.getElementById('qrcode');
+    const photoId = document.getElementById('photoId').value;
+    
+    if (format === 'png') {
+        // Download canvas as PNG
+        const canvas = qrContainer.querySelector('canvas');
+        if (canvas) {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `qr-photo-${photoId}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    } else if (format === 'svg') {
+        // Convert canvas to high-res PNG for print (2048x2048)
+        const canvas = qrContainer.querySelector('canvas');
+        if (canvas) {
+            const highResCanvas = document.createElement('canvas');
+            highResCanvas.width = 2048;
+            highResCanvas.height = 2048;
+            const ctx = highResCanvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(canvas, 0, 0, 2048, 2048);
+            
+            highResCanvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `qr-photo-${photoId}-2048.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    }
+}
+
+function uploadAnother() {
+    // Hide success section
+    document.getElementById('successSection').classList.remove('active');
+    
+    // Show upload section
+    document.getElementById('uploadSection').classList.add('active');
+    
+    // Reset form
+    resetForm();
+    
+    // Increment photo ID
+    const photoIdInput = document.getElementById('photoId');
+    photoIdInput.value = parseInt(photoIdInput.value) + 1;
+    document.getElementById('photoIdPreview').textContent = photoIdInput.value;
 }
 
 // Check authentication on page load

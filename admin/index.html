@@ -58,6 +58,62 @@
             display: block;
         }
 
+        .success-section {
+            display: none;
+        }
+
+        .success-section.active {
+            display: block;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .success-section h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .photo-url {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .qr-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .qr-container canvas,
+        .qr-container img {
+            max-width: 100%;
+            height: auto !important;
+        }
+
+        .qr-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .qr-buttons .btn {
+            flex: 1;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -305,20 +361,11 @@
         <!-- Upload Section -->
         <div class="upload-section" id="uploadSection">
             <div class="form-group">
-                <label for="sceneSelect">Оберіть сцену:</label>
-                <select id="sceneSelect">
-                    <option value="1">Сцена 1</option>
-                    <option value="2">Сцена 2</option>
-                    <option value="3">Сцена 3</option>
-                    <option value="4">Сцена 4</option>
-                    <option value="5">Сцена 5</option>
-                    <option value="6">Сцена 6</option>
-                    <option value="7">Сцена 7</option>
-                    <option value="8">Сцена 8</option>
-                    <option value="11">Сцена 11</option>
-                    <option value="12">Сцена 12</option>
-                    <option value="20">Сцена 20</option>
-                </select>
+                <label for="photoId">Номер фото:</label>
+                <input type="number" id="photoId" min="1" max="9999" placeholder="1, 2, 3..." value="1">
+                <div style="color: #666; font-size: 0.85rem; margin-top: 5px;">
+                    URL буде: /photo/<span id="photoIdPreview">1</span>/
+                </div>
             </div>
 
             <div class="form-group">
@@ -368,8 +415,30 @@
                 <a class="logout-link" onclick="logout()">Вийти</a>
             </div>
         </div>
+
+        <!-- Success Section with QR Code -->
+        <div class="success-section" id="successSection">
+            <div class="success-icon">✅</div>
+            <h2>Фото успішно завантажено!</h2>
+            
+            <div class="photo-url">
+                <strong>URL:</strong> <span id="photoUrl"></span>
+            </div>
+            
+            <div class="qr-container">
+                <div id="qrcode"></div>
+            </div>
+            
+            <div class="qr-buttons">
+                <button class="btn btn-secondary" onclick="downloadQR('png')">⬇️ Завантажити PNG</button>
+                <button class="btn btn-secondary" onclick="downloadQR('svg')">⬇️ Завантажити SVG</button>
+            </div>
+            
+            <button class="btn btn-primary" onclick="uploadAnother()">Завантажити ще одне фото</button>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
     <script src="app.js"></script>
 </body>
