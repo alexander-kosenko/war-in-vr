@@ -104,12 +104,31 @@
         Photo not found
     </div>
     
-    <a-scene renderer="antialias: true; colorManagement: true; sortObjects: true; physicallyCorrectLights: true; maxCanvasWidth: 1920; maxCanvasHeight: 1920;" 
+    <a-scene renderer="antialias: true; colorManagement: true; sortObjects: true; physicallyCorrectLights: true; maxCanvasWidth: 8192; maxCanvasHeight: 8192; precision: highp;" 
              vr-mode-ui="enabled: true">
-        <a-sky id="panorama" rotation="0 -90 0"></a-sky>
+        <a-assets>
+            <img id="panorama-img" crossorigin="anonymous">
+        </a-assets>
+        <a-sky id="panorama" src="#panorama-img" rotation="0 -90 0" high-res-texture></a-sky>
     </a-scene>
     
     <script>
+        // Компонент для високої якості текстур
+        AFRAME.registerComponent('high-res-texture', {
+            init: function() {
+                this.el.addEventListener('materialtextureloaded', (e) => {
+                    const material = this.el.getObject3D('mesh').material;
+                    if (material.map) {
+                        material.map.minFilter = THREE.LinearFilter;
+                        material.map.magFilter = THREE.LinearFilter;
+                        material.map.anisotropy = 16; // Максимальна анізотропна фільтрація
+                        material.map.needsUpdate = true;
+                        console.log('✓ High-res texture settings applied');
+                    }
+                });
+            }
+        });
+        
         // Встановлюємо високу якість рендерингу одразу
         document.addEventListener('DOMContentLoaded', function() {
             const sceneEl = document.querySelector('a-scene');
@@ -123,8 +142,11 @@
         function setHighQualityRendering() {
             const sceneEl = document.querySelector('a-scene');
             if (sceneEl.renderer) {
-                sceneEl.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Обмежуємо до 2x для продуктивності
-                console.log('Renderer pixelRatio set to:', sceneEl.renderer.getPixelRatio());
+                sceneEl.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                // Встановлюємо максимальну анізотропію
+                const maxAnisotropy = sceneEl.renderer.capabilities.getMaxAnisotropy();
+                console.log('Max anisotropy:', maxAnisotropy);
+                console.log('Renderer pixelRatio:', sceneEl.renderer.getPixelRatio());
             }
         }
     </script>
@@ -152,6 +174,7 @@
             document.getElementById('preloader').classList.add('hidden');
         } else {
             const panoramaUrl = `${R2_URL}/${photoId}/picture/1.jpg`;
+            const panoramaImg = document.getElementById('panorama-img');
             const panorama = document.getElementById('panorama');
 
             // Update page title
@@ -167,50 +190,68 @@
                         return;
                     }
 
-                    // Фото існує — завантажуємо
-                    panorama.setAttribute('src', panoramaUrl);
+                    // Фото існує — завантажуємо з повною роздільністю
+                    panoramaImg.src = panoramaUrl;
 
                     let loadTimeout = setTimeout(function() {
                         document.getElementById('error').classList.add('show');
                         document.getElementById('error').textContent = `Фото #${photoId} не вдалось завантажити`;
                         document.getElementById('preloader').classList.add('hidden');
-                    }, 20000);
+                    }, 30000); // Збільшено до 30 сек для великих файлів
 
-                    panorama.addEventListener('materialtextureloaded', function() {
+                    // Чекаємо завантаження IMAGE елемента
+                    panoramaImg.addEventListener('load', function() {
                         clearTimeout(loadTimeout);
+                        console.log('Panorama loaded:', panoramaImg.naturalWidth, 'x', panoramaImg.naturalHeight);
+                        
+                        // Приховуємо preloader
                         setTimeout(function() {
                             document.getElementById('preloader').classList.add('hidden');
-                            
-                            // Покращення якості рендерингу
-                            const sceneEl = document.querySelector('a-scene');
-                            if (sceneEl.renderer) {
-                                sceneEl.renderer.setPixelRatio(window.devicePixelRatio);
-                            }
-                            
-                            // Автоматичний fullscreen на мобільних
-                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                            if (isMobile) {
-                                // Спробувати увійти в fullscreen після першого дотику
+                        }, 300);
+                        
+                        // Автоматичний fullscreen на мобільних - після короткої затримки
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                        if (isMobile) {
+                            setTimeout(() => {
                                 const enterFullscreen = () => {
                                     const elem = document.documentElement;
-                                    if (elem.requestFullscreen) {
-                                        elem.requestFullscreen().catch(err => console.log('Fullscreen denied:', err));
-                                    } else if (elem.webkitRequestFullscreen) { // Safari
-                                        elem.webkitRequestFullscreen();
-                                    } else if (elem.mozRequestFullScreen) { // Firefox
-                                        elem.mozRequestFullScreen();
-                                    } else if (elem.msRequestFullscreen) { // IE11
-                                        elem.msRequestFullscreen();
+                                    const promise = elem.requestFullscreen 
+                                        ? elem.requestFullscreen()
+                                        : elem.webkitRequestFullscreen 
+                                        ? elem.webkitRequestFullscreen()
+                                        : elem.mozRequestFullScreen 
+                                        ? elem.mozRequestFullScreen()
+                                        : elem.msRequestFullscreen 
+                                        ? elem.msRequestFullscreen()
+                                        : null;
+                                    
+                                    if (promise) {
+                                        promise.then(() => {
+                                            console.log('✓ Fullscreen activated');
+                                            // Блокуємо орієнтацію в landscape на мобільних
+                                            if (screen.orientation && screen.orientation.lock) {
+                                                screen.orientation.lock('landscape').catch(err => {
+                                                    console.log('Orientation lock not supported:', err);
+                                                });
+                                            }
+                                        }).catch(err => {
+                                            console.log('Fullscreen request denied:', err);
+                                        });
                                     }
-                                    document.removeEventListener('touchstart', enterFullscreen);
-                                    document.removeEventListener('click', enterFullscreen);
                                 };
                                 
                                 // Додаємо слухачі для першого дотику/кліку
-                                document.addEventListener('touchstart', enterFullscreen, { once: true });
-                                document.addEventListener('click', enterFullscreen, { once: true });
-                            }
-                        }, 300);
+                                document.body.addEventListener('touchstart', enterFullscreen, { once: true });
+                                document.body.addEventListener('click', enterFullscreen, { once: true });
+                            }, 500); // Даємо час на рендеринг
+                        }
+                    });
+                    
+                    panoramaImg.addEventListener('error', function() {
+                        clearTimeout(loadTimeout);
+                        document.getElementById('error').classList.add('show');
+                        document.getElementById('error').textContent = `Помилка завантаження фото #${photoId}`;
+                        document.getElementById('preloader').classList.add('hidden');
                     });
                 })
                 .catch(() => {
