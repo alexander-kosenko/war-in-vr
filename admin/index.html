@@ -189,9 +189,15 @@
             transition: border-color .2s;
         }
 
-        input[type="number"] { -moz-appearance: textfield; }
+        input[type="number"] { 
+            appearance: textfield;
+            -moz-appearance: textfield; 
+        }
         input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        input[type="number"]::-webkit-inner-spin-button { 
+            appearance: none;
+            -webkit-appearance: none; 
+        }
 
         input:focus { outline: none; border-color: #555; }
 
@@ -703,13 +709,290 @@
         .photo-card { animation: cardIn .2s ease; }
 
         /* ── Responsive ─────────────────────────────────── */
-        @media (max-width: 640px) {
-            .auth-card { padding: 32px 22px; }
-            #mainSection { padding: 0 14px 60px; }
-            .card { padding: 20px 16px; }
-            .card-photo-wrap { flex: 0 0 45%; }
-            .card-right { padding: 12px 14px; gap: 10px; }
-            .card-qr { width: 56px; height: 56px; }
+        @media (max-width: 768px) {
+            /* ── Layout ──────────────────────────────────── */
+            .auth-card { 
+                padding: 32px 24px; 
+                max-width: 100%;
+            }
+            
+            #mainSection { 
+                padding: 0 16px 60px; 
+            }
+            
+            .card { 
+                padding: 20px 16px; 
+            }
+
+            /* ── Top bar ─────────────────────────────────── */
+            .top-bar {
+                padding: 20px 0 24px;
+                margin-bottom: 24px;
+            }
+
+            .top-bar-logo {
+                font-size: 0.9rem;
+            }
+
+            .logout-link {
+                font-size: 0.75rem;
+                padding: 5px 12px;
+            }
+
+            /* ── Photo cards ─────────────────────────────── */
+            .photo-card {
+                flex-direction: column;
+            }
+
+            .card-photo-wrap {
+                flex: 0 0 auto;
+                width: 100%;
+                aspect-ratio: 2 / 1;
+            }
+
+            .card-right {
+                flex-direction: column;
+                padding: 16px;
+                gap: 12px;
+            }
+
+            .card-info {
+                width: 100%;
+            }
+
+            .card-qr-col {
+                width: 100%;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .card-qr {
+                width: 64px;
+                height: 64px;
+            }
+
+            .qr-dl-row {
+                gap: 6px;
+            }
+
+            /* ── Buttons ─────────────────────────────────── */
+            .card-btns {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .cbtn {
+                flex: 1;
+                text-align: center;
+                padding: 8px 12px;
+                font-size: 0.75rem;
+            }
+
+            /* ── File upload ─────────────────────────────── */
+            .file-upload {
+                padding: 32px 16px;
+            }
+
+            .file-upload-icon {
+                font-size: 1.5rem;
+            }
+
+            .file-upload-text {
+                font-size: 0.8rem;
+            }
+
+            /* ── Modals ──────────────────────────────────── */
+            .modal {
+                max-width: 100%;
+                padding: 24px 20px 20px;
+                margin: 0 8px;
+            }
+
+            .modal-title {
+                font-size: 0.95rem;
+            }
+
+            .modal-text {
+                font-size: 0.85rem;
+            }
+
+            .modal-buttons {
+                flex-direction: column-reverse;
+            }
+
+            .btn-modal {
+                width: 100%;
+            }
+
+            /* ── Text sizes ──────────────────────────────── */
+            .hint {
+                font-size: 0.75rem;
+            }
+
+            .card-url {
+                font-size: 0.7rem;
+            }
+
+            .card-filename {
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* ── Extra small screens ─────────────────────── */
+            .auth-card {
+                padding: 28px 20px;
+            }
+
+            #mainSection {
+                padding: 0 12px 50px;
+            }
+
+            .card {
+                padding: 16px 12px;
+            }
+
+            .top-bar {
+                padding: 16px 0 20px;
+                margin-bottom: 20px;
+            }
+
+            .top-bar-logo {
+                font-size: 0.85rem;
+                letter-spacing: 0.08em;
+            }
+
+            .logout-link {
+                font-size: 0.7rem;
+                padding: 4px 10px;
+            }
+
+            .section-title {
+                font-size: 0.65rem;
+            }
+
+            .file-upload {
+                padding: 24px 12px;
+            }
+
+            .file-upload-icon {
+                font-size: 1.2rem;
+                margin-bottom: 8px;
+            }
+
+            .file-upload-text {
+                font-size: 0.75rem;
+            }
+
+            .btn {
+                padding: 11px;
+                font-size: 0.85rem;
+            }
+
+            .card-id {
+                font-size: 0.7rem;
+            }
+
+            .card-url {
+                font-size: 0.68rem;
+            }
+
+            .card-filename {
+                font-size: 0.63rem;
+            }
+
+            .card-qr {
+                width: 56px;
+                height: 56px;
+            }
+
+            .cbtn {
+                padding: 7px 10px;
+                font-size: 0.7rem;
+            }
+
+            .gallery-count {
+                font-size: 0.7rem;
+                padding: 2px 8px;
+            }
+
+            .file-item {
+                padding: 8px 10px;
+                gap: 10px;
+            }
+
+            .file-item-icon {
+                font-size: 18px;
+            }
+
+            .file-item-name {
+                font-size: 12px;
+            }
+
+            .file-item-meta {
+                font-size: 11px;
+                gap: 8px;
+            }
+
+            .progress-item {
+                padding: 8px 10px;
+            }
+
+            .progress-item-title {
+                font-size: 12px;
+            }
+
+            .progress-item-status {
+                font-size: 11px;
+            }
+
+            .modal {
+                padding: 20px 16px 16px;
+            }
+
+            .modal-title {
+                font-size: 0.9rem;
+            }
+
+            .modal-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .modal-text {
+                font-size: 0.8rem;
+            }
+
+            .btn-modal {
+                padding: 9px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            /* ── Touch devices ───────────────────────────── */
+            .cbtn,
+            .btn,
+            .btn-modal,
+            .logout-link {
+                min-height: 44px; /* iOS accessibility minimum */
+            }
+
+            .file-upload {
+                min-height: 120px;
+            }
+
+            /* Увеличить области касания кнопок */
+            .file-item-remove {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+
+            .modal-close {
+                padding: 8px;
+                font-size: 1.4rem;
+            }
         }
     </style>
 </head>
