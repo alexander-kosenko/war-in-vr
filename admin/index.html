@@ -3,369 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>War in VR - Admin Panel</title>
+    <title>War in VR — Admin</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+        }
+
+        /* ── Auth screen ───────────────────────────────── */
+        #authScreen {
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: 100vh;
             padding: 20px;
         }
 
-        .container {
-            background: white;
+        .auth-card {
+            background: #fff;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
             width: 100%;
+            max-width: 420px;
             padding: 40px;
         }
 
-        .header {
+        .auth-card h1 {
+            font-size: 1.8rem;
+            color: #333;
             text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .auth-card .subtitle {
+            text-align: center;
+            color: #888;
+            font-size: .9rem;
             margin-bottom: 30px;
         }
 
-        h1 {
-            font-size: 2rem;
-            color: #333;
-            margin-bottom: 10px;
+        /* ── Main screen ───────────────────────────────── */
+        #mainSection {
+            display: none;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 30px 20px 60px;
         }
 
-        .subtitle {
-            color: #666;
-            font-size: 0.95rem;
-        }
-
-        .auth-section {
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 30px;
         }
 
-        .upload-section {
-            display: none;
+        .top-bar h1 {
+            font-size: 1.6rem;
+            color: #fff;
         }
 
-        .upload-section.active {
-            display: block;
+        .top-bar .logout-link {
+            color: rgba(255,255,255,.8);
+            font-size: .9rem;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,.4);
+            padding: 6px 14px;
+            border-radius: 8px;
+            transition: background .2s;
         }
 
-        .success-section {
-            display: none;
+        .top-bar .logout-link:hover {
+            background: rgba(255,255,255,.15);
         }
 
-        .success-section.active {
-            display: block;
+        /* ── Card wrapper ──────────────────────────────── */
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,.15);
+            padding: 30px;
+            margin-bottom: 30px;
         }
 
-        .success-icon {
-            font-size: 4rem;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .success-section h2 {
-            text-align: center;
+        .card h2 {
+            font-size: 1.1rem;
             color: #333;
             margin-bottom: 20px;
-            font-size: 1.5rem;
         }
 
-        .photo-url {
-            background: #f0f4ff;
-            padding: 15px;
+        /* ── Alert ─────────────────────────────────────── */
+        .alert {
+            padding: 12px 16px;
             border-radius: 10px;
             margin-bottom: 20px;
-            text-align: center;
-            word-break: break-all;
+            font-size: .92rem;
+            display: none;
         }
+        .alert.active { display: block; }
+        .alert-error   { background: #ffebee; color: #c62828; border: 1px solid #ef5350; }
+        .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #66bb6a; }
 
-        .qr-container {
-            display: flex;
-            justify-content: center;
-            margin: 30px 0;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-        }
-
-        .qr-container canvas,
-        .qr-container img {
-            max-width: 100%;
-            height: auto !important;
-        }
-
-        .qr-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .qr-buttons .btn {
-            flex: 1;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
+        /* ── Form elements ─────────────────────────────── */
+        .form-group { margin-bottom: 18px; }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
-            color: #333;
-            font-size: 0.95rem;
+            color: #444;
+            font-size: .92rem;
         }
 
         input[type="password"],
-        input[type="text"],
-        select {
+        input[type="number"] {
             width: 100%;
-            padding: 12px 16px;
+            padding: 11px 14px;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 1rem;
-            transition: border-color 0.3s;
+            transition: border-color .25s;
         }
 
-        input:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
+        input:focus { outline: none; border-color: #667eea; }
+
+        .hint {
+            color: #888;
+            font-size: .82rem;
+            margin-top: 5px;
         }
 
+        /* ── File upload zone ──────────────────────────── */
         .file-upload {
-            border: 3px dashed #e0e0e0;
+            border: 3px dashed #d0d0d0;
             border-radius: 10px;
-            padding: 40px 20px;
+            padding: 36px 20px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all .25s;
             background: #f8f9fa;
         }
 
-        .file-upload:hover {
+        .file-upload:hover,
+        .file-upload.dragover {
             border-color: #667eea;
             background: #f0f4ff;
         }
 
-        .file-upload.dragover {
-            border-color: #667eea;
-            background: #e8efff;
-        }
+        .file-upload-icon { font-size: 2.4rem; margin-bottom: 8px; }
 
-        .file-upload-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
-
-        .file-upload-text {
-            color: #666;
-            font-size: 0.95rem;
-        }
+        .file-upload-text { color: #777; font-size: .9rem; line-height: 1.5; }
 
         .file-info {
             display: none;
-            background: #e8efff;
-            padding: 15px;
+            background: #eef1ff;
+            padding: 12px 15px;
             border-radius: 10px;
-            margin-top: 15px;
+            margin-top: 12px;
+            font-size: .9rem;
         }
+        .file-info.active { display: block; }
 
-        .file-info.active {
-            display: block;
-        }
-
-        .progress-section {
-            display: none;
-            margin-top: 20px;
-        }
-
-        .progress-section.active {
-            display: block;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        .progress-text {
-            font-size: 0.9rem;
-            color: #666;
-            text-align: center;
-        }
-
-        .versions-list {
-            margin-top: 15px;
-        }
-
-        .version-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-
-        .version-status {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .version-status.pending {
-            background: #e0e0e0;
-            color: #999;
-        }
-
-        .version-status.processing {
-            background: #ffd700;
-            color: white;
-        }
-
-        .version-status.done {
-            background: #4caf50;
-            color: white;
-        }
-
+        /* ── Buttons ───────────────────────────────────── */
         .btn {
             width: 100%;
-            padding: 14px;
+            padding: 13px;
             border: none;
             border-radius: 10px;
-            font-size: 1rem;
+            font-size: .98rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all .25s;
             margin-top: 10px;
         }
 
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            color: #fff;
         }
 
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 20px rgba(102,126,234,.35);
         }
 
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+        .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+
+        /* ── Gallery ───────────────────────────────────── */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 20px;
         }
 
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .alert.active {
-            display: block;
-        }
-
-        .alert-error {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #ef5350;
-        }
-
-        .alert-success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #66bb6a;
-        }
-
-        .logout-btn {
+        .gallery-empty {
+            color: #aaa;
             text-align: center;
-            margin-top: 20px;
+            padding: 20px 0;
+            font-size: .95rem;
         }
 
-        .logout-link {
+        .photo-card {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 14px;
+            padding: 18px 16px 14px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,.07);
+            transition: box-shadow .2s;
+        }
+
+        .photo-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,.12);
+        }
+
+        .card-id {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 12px;
+        }
+
+        .card-qr {
+            display: block;
+            margin: 0 auto 10px;
+            border-radius: 6px;
+            width: 160px;
+            height: 160px;
+        }
+
+        .card-url {
+            font-size: .68rem;
+            color: #aaa;
+            word-break: break-all;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .card-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-dl {
+            flex: 1;
+            padding: 7px 0;
+            border: 1.5px solid #667eea;
+            border-radius: 8px;
+            background: #fff;
             color: #667eea;
-            text-decoration: none;
-            font-size: 0.9rem;
+            font-size: .82rem;
+            font-weight: 600;
             cursor: pointer;
+            transition: all .2s;
         }
 
-        .logout-link:hover {
-            text-decoration: underline;
+        .btn-dl:hover {
+            background: #667eea;
+            color: #fff;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 30px 20px;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-            }
+        /* ── Responsive ────────────────────────────────── */
+        @media (max-width: 600px) {
+            .auth-card { padding: 30px 22px; }
+            #mainSection { padding: 20px 14px 50px; }
+            .card { padding: 22px 18px; }
+            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+
+    <!-- ── Auth Screen ─────────────────────────────────────── -->
+    <div id="authScreen">
+        <div class="auth-card">
             <h1>🎮 War in VR</h1>
             <p class="subtitle">Адміністративна панель</p>
-        </div>
 
-        <div class="alert alert-error" id="alert"></div>
+            <div class="alert" id="alert"></div>
 
-        <!-- Auth Section -->
-        <div class="auth-section" id="authSection">
             <div class="form-group">
                 <label for="password">Пароль:</label>
-                <input type="password" id="password" placeholder="Введіть пароль доступу">
+                <input type="password" id="password" placeholder="Введіть пароль доступу" autofocus>
             </div>
             <button class="btn btn-primary" onclick="authenticate()">Увійти</button>
         </div>
+    </div>
 
-        <!-- Upload Section -->
-        <div class="upload-section" id="uploadSection">
+    <!-- ── Main Screen ─────────────────────────────────────── -->
+    <div id="mainSection">
+
+        <div class="top-bar">
+            <h1>🎮 War in VR — Admin</h1>
+            <a class="logout-link" onclick="logout()">Вийти</a>
+        </div>
+
+        <div class="alert" id="alertMain"></div>
+
+        <!-- Upload form -->
+        <div class="card">
+            <h2>Завантажити нове фото</h2>
+
             <div class="form-group">
                 <label for="photoId">Номер фото:</label>
-                <input type="number" id="photoId" min="1" max="9999" placeholder="1, 2, 3..." value="1">
-                <div style="color: #666; font-size: 0.85rem; margin-top: 5px;">
-                    URL буде: /photo/<span id="photoIdPreview">1</span>/
-                </div>
+                <input type="number" id="photoId" min="1" max="9999" value="1">
+                <p class="hint">URL: /photo/?id=<span id="photoIdPreview">1</span></p>
             </div>
 
             <div class="form-group">
@@ -373,73 +319,34 @@
                 <div class="file-upload" id="fileUpload" onclick="document.getElementById('fileInput').click()">
                     <div class="file-upload-icon">📷</div>
                     <div class="file-upload-text">
-                        Перетягніть 360° фото сюди<br>
-                        або натисніть для вибору
+                        Перетягніть 360° фото сюди<br>або натисніть для вибору
                     </div>
                 </div>
-                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
-                
+                <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+
                 <div class="file-info" id="fileInfo">
                     <strong id="fileName"></strong>
-                    <div id="fileSize" style="color: #666; font-size: 0.9rem; margin-top: 5px;"></div>
-                </div>
-            </div>
-
-            <div class="progress-section" id="progressSection">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <div class="progress-text" id="progressText">Підготовка...</div>
-                
-                <div class="versions-list" id="versionsList">
-                    <div class="version-item">
-                        <div class="version-status pending" id="statusMobile">⏳</div>
-                        <div>Mobile (2048x1024, WebP)</div>
-                    </div>
-                    <div class="version-item">
-                        <div class="version-status pending" id="statusDesktop">⏳</div>
-                        <div>Desktop (4096x2048, WebP)</div>
-                    </div>
-                    <div class="version-item">
-                        <div class="version-status pending" id="statusVr">⏳</div>
-                        <div>VR (8192x4096, JPEG)</div>
-                    </div>
+                    <span id="fileSize" style="color:#666; margin-left:8px;"></span>
                 </div>
             </div>
 
             <button class="btn btn-primary" id="uploadBtn" onclick="processAndUpload()" disabled>
-                Обробити і завантажити
+                Завантажити
             </button>
+        </div>
 
-            <div class="logout-btn">
-                <a class="logout-link" onclick="logout()">Вийти</a>
+        <!-- Gallery -->
+        <div class="card">
+            <h2>Всі фото</h2>
+            <div class="gallery-grid" id="gallery">
+                <p class="gallery-empty">Завантаження…</p>
             </div>
         </div>
 
-        <!-- Success Section with QR Code -->
-        <div class="success-section" id="successSection">
-            <div class="success-icon">✅</div>
-            <h2>Фото успішно завантажено!</h2>
-            
-            <div class="photo-url">
-                <strong>URL:</strong> <span id="photoUrl"></span>
-            </div>
-            
-            <div class="qr-container">
-                <div id="qrcode"></div>
-            </div>
-            
-            <div class="qr-buttons">
-                <button class="btn btn-secondary" onclick="downloadQR('png')">⬇️ Завантажити PNG</button>
-                <button class="btn btn-secondary" onclick="downloadQR('svg')">⬇️ Завантажити SVG</button>
-            </div>
-            
-            <button class="btn btn-primary" onclick="uploadAnother()">Завантажити ще одне фото</button>
-        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <!-- qrcode library (canvas + SVG support) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
