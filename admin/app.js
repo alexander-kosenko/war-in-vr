@@ -128,25 +128,20 @@ async function loadPhotos() {
             const saved = lsLoad();
             uploadedPhotos = saved !== null ? saved : base;
         } else {
-            // WORKER mode: спробуємо R2, якщо 404 або порожньо — стаємо на статичний /photos.json
+            // WORKER mode: завантажуємо ТІЛЬКИ з R2 (актуальні фото)
             const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
-            let resp = await fetch(r2Url);
+            const resp = await fetch(r2Url);
+            
             if (resp.ok) {
                 const data = await resp.json();
-                const list = (data.photos || []).map(Number);
-                // Якщо R2 повернув порожній список — використовуємо статичний
-                if (list.length > 0) {
-                    uploadedPhotos = list;
-                } else {
-                    const fallback = await fetch('/photos.json?t=' + Date.now());
-                    const fdata = await fallback.json();
-                    uploadedPhotos = (fdata.photos || []).map(Number);
-                }
-            } else {
-                resp = await fetch('/photos.json?t=' + Date.now());
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const data = await resp.json();
                 uploadedPhotos = (data.photos || []).map(Number);
+                console.log('✓ Фото завантажено з R2:', uploadedPhotos.length);
+            } else if (resp.status === 404) {
+                // photos.json ще не існує на R2 - немає завантажених фото
+                uploadedPhotos = [];
+                console.log('ℹ️ photos.json не знайдено на R2 - галерея порожня');
+            } else {
+                throw new Error(`Помилка завантаження з R2: HTTP ${resp.status}`);
             }
         }
     } catch (e) {
