@@ -205,11 +205,11 @@ function createPhotoCard(id) {
         </div>
     `;
 
-    // Render QR preview — larger margin (5 cells = thick white border)
+    // Render QR preview — larger margin (10 cells = thick white border)
     requestAnimationFrame(() => {
         try {
             const img = document.getElementById(`qr-preview-${id}`);
-            if (img) img.src = makeQRDataURL(photoUrl, 3, 5);
+            if (img) img.src = makeQRDataURL(photoUrl, 3, 10);
         } catch(e) { console.error('QR preview error', e); }
     });
 
@@ -370,7 +370,7 @@ async function downloadQRForPhoto(id, format) {
 
     if (format === 'png') {
         try {
-            const dataUrl = makeQRDataURL(url, 14, 5); // ~14px/cell + 5-cell white border
+            const dataUrl = makeQRDataURL(url, 14, 20); // ~14px/cell + 20-cell white border (larger margin)
             triggerDownload(dataURLtoBlob(dataUrl), `qr-photo-${id}.png`);
         } catch (e) {
             console.error(e);
@@ -378,7 +378,7 @@ async function downloadQRForPhoto(id, format) {
         }
     } else if (format === 'svg') {
         try {
-            const svg = makeQR(url).createSvgTag(10, 5);
+            const svg = makeQR(url).createSvgTag(10, 20); // 20-cell white border (larger margin)
             const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
             triggerDownload(blob, `qr-photo-${id}.svg`);
         } catch (e) {
