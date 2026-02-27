@@ -77,11 +77,65 @@
     
     <div class="error" id="error">Photo not found</div>
     
-    <a-scene vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    <a-scene>
         <a-sky id="panorama" rotation="0 -90 0"></a-sky>
     </a-scene>
     
     <script>
+        // Збереження дозволу motion sensors в localStorage
+        const MOTION_PERMISSION_KEY = 'warinvr_motion_permission';
+        
+        // Перевірка збереженого дозволу
+        function checkSavedPermission() {
+            try {
+                const saved = localStorage.getItem(MOTION_PERMISSION_KEY);
+                return saved === 'granted';
+            } catch {
+                return false;
+            }
+        }
+        
+        // Збереження дозволу
+        function savePermission(granted) {
+            try {
+                localStorage.setItem(MOTION_PERMISSION_KEY, granted ? 'granted' : 'denied');
+            } catch {}
+        }
+        
+        // Автоматичний запит дозволу якщо вже був наданий раніше
+        function handleMotionPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && 
+                typeof DeviceOrientationEvent.requestPermission === 'function') {
+                
+                // iOS 13+ потребує явного дозволу
+                if (checkSavedPermission()) {
+                    // Якщо раніше дозволяли - запитуємо автоматично при першому кліку
+                    document.addEventListener('click', function requestPermissionOnce() {
+                        DeviceOrientationEvent.requestPermission()
+                            .then(response => {
+                                if (response === 'granted') {
+                                    savePermission(true);
+                                }
+                            })
+                            .catch(() => {});
+                        document.removeEventListener('click', requestPermissionOnce);
+                    }, { once: true });
+                } else {
+                    // Перший раз - A-Frame покаже свій діалог, збережемо результат
+                    const origRequest = DeviceOrientationEvent.requestPermission;
+                    DeviceOrientationEvent.requestPermission = function() {
+                        return origRequest.call(this).then(result => {
+                            savePermission(result === 'granted');
+                            return result;
+                        });
+                    };
+                }
+            }
+        }
+        
+        // Викликаємо перед завантаженням A-Frame scene
+        handleMotionPermission();
+        
         function getPhotoId() {
             const urlParams = new URLSearchParams(window.location.search);
             const idParam = urlParams.get('id');
