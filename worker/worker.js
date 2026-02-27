@@ -38,22 +38,56 @@ export default {
     }
 
     // ── GET /photos → scan R2 bucket and return actual list ─────────────────
+    // GET /?id=X returns specific photo info
+    // GET / returns all photos
     if (request.method === 'GET') {
       try {
+        const url = new URL(request.url);
+        const photoId = url.searchParams.get('id');
         const bucket = env.R2_BUCKET;
+        
+        // Single photo query
+        if (photoId) {
+          const prefix = `${photoId}/`;
+          const listed = await bucket.list({ prefix, limit: 1 });
+          
+          if (listed.objects.length > 0) {
+            const match = listed.objects[0].key.match(/^(\d+)\/(.+)$/);
+            if (match) {
+              return new Response(JSON.stringify({ 
+                id: Number(match[1]), 
+                filename: match[2] 
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+          }
+          
+          return new Response(JSON.stringify({ error: 'Photo not found' }), {
+            status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        // All photos list
         const listed = await bucket.list();
         
-        // Extract photo IDs from paths like "1/picture/1.jpg", "2/picture/1.jpg"
-        const photoIds = new Set();
+        // Extract photo IDs and filenames from paths like "1/photo.jpg", "2/panorama.jpg"
+        const photos = [];
+        const seenIds = new Set();
+        
         for (const obj of listed.objects) {
-          const match = obj.key.match(/^(\d+)\/picture\/1\.jpg$/);
-          if (match) {
-            photoIds.add(Number(match[1]));
+          const match = obj.key.match(/^(\d+)\/(.+)$/);
+          if (match && !seenIds.has(match[1])) {
+            seenIds.add(match[1]);
+            photos.push({
+              id: Number(match[1]),
+              filename: match[2]
+            });
           }
         }
         
-        const sorted = Array.from(photoIds).sort((a, b) => a - b);
-        return new Response(JSON.stringify({ photos: sorted }), {
+        photos.sort((a, b) => a.id - b.id);
+        return new Response(JSON.stringify({ photos }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (error) {
@@ -91,12 +125,10 @@ export default {
           });
         }
 
-        // Delete all known file variants for this scene
-        await Promise.all([
-          bucket.delete(`${sceneId}/picture/1.jpg`),
-          bucket.delete(`${sceneId}/picture/mobile.webp`),
-          bucket.delete(`${sceneId}/picture/desktop.webp`),
-        ]);
+        // List all files in the scene directory and delete them
+        const prefix = `${sceneId}/`;
+        const listed = await bucket.list({ prefix });
+        await Promise.all(listed.objects.map(obj => bucket.delete(obj.key)));
 
         return new Response(JSON.stringify({ success: true, message: `Фото ${sceneId} видалено` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -113,14 +145,19 @@ export default {
         });
       }
 
-      await bucket.put(`${sceneId}/picture/1.jpg`, file, {
+      // Use original filename
+      const filename = file.name || '1.jpg';
+      const key = `${sceneId}/${filename}`;
+
+      await bucket.put(key, file, {
         httpMetadata: { contentType: file.type || 'image/jpeg' }
       });
 
       return new Response(JSON.stringify({
         success: true,
         message: `Фото ${sceneId} завантажено!`,
-        url: `${env.PUBLIC_URL}/${sceneId}/picture/1.jpg`
+        url: `${env.PUBLIC_URL}/${key}`,
+        filename: filename
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

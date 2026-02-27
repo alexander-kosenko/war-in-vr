@@ -148,25 +148,25 @@
         
         const photoId = getPhotoId();
         const R2_URL = 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev';
+        const WORKER_URL = 'https://war-in-vr-upload.vr-livingthewar.workers.dev';
         
         if (!photoId) {
             document.getElementById('error').classList.add('show');
             document.getElementById('error').textContent = 'Невірне посилання. Формат: /?id=1';
             document.getElementById('preloader').classList.add('hidden');
         } else {
-            const panoramaUrl = `${R2_URL}/${photoId}/picture/1.jpg`;
-            const panorama = document.getElementById('panorama');
-            
-            document.title = `War in VR - Фото ${photoId}`;
-            
-            fetch(panoramaUrl, { method: 'HEAD' })
-                .then(resp => {
-                    if (!resp.ok) {
-                        document.getElementById('error').classList.add('show');
-                        document.getElementById('error').textContent = `Фото #${photoId} не існує`;
-                        document.getElementById('preloader').classList.add('hidden');
-                        return;
+            // Fetch filename from worker API
+            fetch(`${WORKER_URL}?id=${photoId}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.error || !data.filename) {
+                        throw new Error(data.error || 'Photo not found');
                     }
+                    
+                    const panoramaUrl = `${R2_URL}/${photoId}/${data.filename}`;
+                    const panorama = document.getElementById('panorama');
+                    
+                    document.title = `War in VR - Фото ${photoId}`;
                     
                     panorama.setAttribute('src', panoramaUrl);
                     
@@ -179,13 +179,14 @@
                     panorama.addEventListener('materialtextureloaded', () => {
                         clearTimeout(loadTimeout);
                         document.getElementById('preloader').classList.add('hidden');
-                        console.log('✓ Panorama loaded');
+                        console.log('✓ Panorama loaded:', data.filename);
                     });
                 })
-                .catch(() => {
+                .catch(err => {
                     document.getElementById('error').classList.add('show');
-                    document.getElementById('error').textContent = `Помилка завантаження фото #${photoId}`;
+                    document.getElementById('error').textContent = `Фото #${photoId} не знайдено`;
                     document.getElementById('preloader').classList.add('hidden');
+                    console.error('Load error:', err);
                 });
         }
     </script>

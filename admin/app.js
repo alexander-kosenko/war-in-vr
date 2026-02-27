@@ -10,7 +10,7 @@ const CONFIG = {
 
 let selectedFile = null;
 let selectedFiles = []; // Array of { file, id }
-let uploadedPhotos = [];
+let uploadedPhotos = []; // Array of { id: number, filename: string }
 let currentCredential = null; // Google ID token
 
 // ─── Auth (Google OAuth) ──────────────────────────────────────────────────────
@@ -137,7 +137,8 @@ async function loadPhotos() {
             
             if (resp.ok) {
                 const data = await resp.json();
-                uploadedPhotos = (data.photos || []).map(Number);
+                // photos is now array of {id, filename}
+                uploadedPhotos = data.photos || [];
                 console.log('✓ Актуальні фото з R2:', uploadedPhotos.length);
             } else {
                 throw new Error(`Помилка отримання списку фото: HTTP ${resp.status}`);
@@ -163,25 +164,24 @@ function renderGallery() {
         return;
     }
 
-    gallery.innerHTML = '';
-    const sorted = [...uploadedPhotos].sort((a, b) => a - b);
-    sorted.forEach(id => {
+    gallery.innerHTML = '';.id - b.id);
+    sorted.forEach(photo => {
         try {
-            gallery.appendChild(createPhotoCard(id));
+            gallery.appendChild(createPhotoCard(photo.id, photo.filename));
         } catch (e) {
-            console.error('Card error #' + id, e);
+            console.error('Card error #' + photo.id, e);
         }
     });
     const badge = document.getElementById('galleryCount');
     if (badge) badge.textContent = sorted.length;
 }
 
-function createPhotoCard(id) {
+function createPhotoCard(id, filename) {
     const photoUrl = photoUrlFor(id);
     const card = document.createElement('div');
     card.className = 'photo-card';
     card.id = `card-${id}`;
-    const r2Url = `${CONFIG.R2_PUBLIC_URL}/${id}/picture/1.jpg`;
+    const r2Url = `${CONFIG.R2_PUBLIC_URL}/${id}/${filename}`;
     card.innerHTML = `
         <div class="card-photo-wrap">
             <img class="card-photo" src="${r2Url}" alt="Photo #${id}" loading="lazy">
@@ -190,6 +190,7 @@ function createPhotoCard(id) {
             <div class="card-info">
                 <div class="card-id">Фото #${id}</div>
                 <div class="card-url">${photoUrl}</div>
+                <div class="card-filename">${filename}
                 <div class="card-filename">${id}/picture/1.jpg</div>
                 <div class="card-btns">
                     <button class="cbtn cbtn-replace" onclick="replacePhoto(${id})">&#9998; Замінити</button>
@@ -318,7 +319,7 @@ async function deletePhoto(id) {
     }
 
     // Remove from list and re-render
-    uploadedPhotos = uploadedPhotos.filter(p => p !== id);
+    uploadedPhotos = uploadedPhotos.filter(p => p.id !== id);
     if (CONFIG.UPLOAD_MODE === 'LOCAL') lsSave([...uploadedPhotos]);
     renderGallery();
     showAlert(`Фото #${id} видалено${CONFIG.UPLOAD_MODE !== 'WORKER' ? ' (з інтерфейсу; видаліть файли з R2 вручну)' : ''}!`, 'success');
@@ -513,11 +514,11 @@ async function processAndUpload() {
     hideAlert();
 
     try {
-        await uploadSingleFile(selectedFile, photoId);
+        const filename = await uploadSingleFile(selectedFile, photoId);
         
         // Add to gallery if not already present
-        if (!uploadedPhotos.includes(photoId)) {
-            uploadedPhotos.push(photoId);
+        if (!uploadedPhotos.some(p => p.id === photoId)) {
+            uploadedPhotos.push({ id: photoId, filename });
             if (CONFIG.UPLOAD_MODE === 'LOCAL') lsSave([...uploadedPhotos]);
             renderGallery();
         }
@@ -547,17 +548,21 @@ async function uploadSingleFile(file, photoId) {
         formData.append('apiSecret', CONFIG.ADMIN_SECRET);
         formData.append('action', 'upload');
         formData.append('sceneId', String(photoId));
-        formData.append('file', file, `${photoId}.jpg`);
+        formData.append('file', file, file.name); // Keep original filename
 
         const response = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.error || `HTTP ${response.status}`);
         }
+        
+        const result = await response.json();
+        return result.filename || file.name;
     } else {
         // LOCAL mode — download original file to computer
         triggerDownload(file, `photo-${photoId}.jpg`);
         await new Promise(r => setTimeout(r, 400));
+        return file.name;
     }
 }
 
@@ -605,7 +610,7 @@ async function uploadMultipleFiles() {
             // Simulate progress
             barEl.style.width = '50%';
             
-            await uploadSingleFile(item.file, item.id);
+            const filename = await uploadSingleFile(item.file, item.id);
             
             // Success
             barEl.style.width = '100%';
@@ -616,8 +621,8 @@ async function uploadMultipleFiles() {
             results.success.push(item.id);
             
             // Add to gallery if not already present
-            if (!uploadedPhotos.includes(item.id)) {
-                uploadedPhotos.push(item.id);
+            if (!uploadedPhotos.some(p => p.id === item.id)) {
+                uploadedPhotos.push({ id: item.id, filename });
             }
 
         } catch (error) {
@@ -690,7 +695,7 @@ function resetUploadForm() {
     document.getElementById('uploadBtn').textContent = 'Завантажити';
 
     // Increment photo ID to next available
-    const maxId = uploadedPhotos.length > 0 ? Math.max(...uploadedPhotos) : 0;
+    const maxId = uploadedPhotos.length > 0 ? Math.max(...uploadedPhotos.map(p => p.id)) : 0;
     const photoIdInput = document.getElementById('photoId');
     photoIdInput.value = maxId + 1;
     document.getElementById('photoIdPreview').textContent = photoIdInput.value;
