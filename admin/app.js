@@ -76,17 +76,19 @@ function createPhotoCard(id) {
     card.id = `card-${id}`;
     const r2Url = `${CONFIG.R2_PUBLIC_URL}/${id}/picture/1.jpg`;
     card.innerHTML = `
-        <div class="card-id">#${id}</div>
         <div class="card-photo-wrap">
             <img class="card-photo" src="${r2Url}" alt="Photo #${id}" loading="lazy">
         </div>
-        <div class="card-qr-wrap">
-            <img class="card-qr" id="qr-preview-${id}" alt="QR #${id}">
-        </div>
-        <div class="card-url">${photoUrl}</div>
-        <div class="card-buttons">
-            <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'png')">↓ PNG</button>
-            <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'svg')">↓ SVG</button>
+        <div class="card-right">
+            <div class="card-id">#${id}</div>
+            <div class="card-qr-wrap">
+                <img class="card-qr" id="qr-preview-${id}" alt="QR #${id}">
+            </div>
+            <div class="card-url">${photoUrl}</div>
+            <div class="card-buttons">
+                <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'png')">↓ PNG</button>
+                <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'svg')">↓ SVG</button>
+            </div>
         </div>
     `;
 
