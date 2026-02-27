@@ -1,6 +1,7 @@
 // Configuration
 const CONFIG = {
     GOOGLE_CLIENT_ID: '160253975823-l8hvle27hsh4ohboh3pj3kn9j2ilhnm0.apps.googleusercontent.com',
+    ADMIN_SECRET: 'fedf785341de1f3f34c7d702fc7764f1a2917947a0537bcb',
     UPLOAD_MODE: 'WORKER',
     WORKER_URL: 'https://war-in-vr-upload.vr-livingthewar.workers.dev',
     R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
@@ -252,12 +253,12 @@ async function confirmReplace() {
         if (CONFIG.UPLOAD_MODE === 'WORKER') {
             if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
             const formData = new FormData();
-            formData.append('googleToken', currentCredential);
+            formData.append('apiSecret', CONFIG.ADMIN_SECRET);
             formData.append('action', 'upload');
             formData.append('sceneId', String(replaceTargetId));
             formData.append('file', replaceFile, `${replaceTargetId}.jpg`);
             const response = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
-            if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Upload failed'); }
+            if (!response.ok) { const err = await response.json().catch(() => ({})); throw new Error(err.error || `HTTP ${response.status}`); }
         } else {
             triggerDownload(replaceFile, `photo-${replaceTargetId}.jpg`);
             await new Promise(r => setTimeout(r, 400));
@@ -301,14 +302,14 @@ async function deletePhoto(id) {
     if (CONFIG.UPLOAD_MODE === 'WORKER' && CONFIG.WORKER_URL) {
         try {
             const formData = new FormData();
-            formData.append('googleToken', currentCredential);
+            formData.append('apiSecret', CONFIG.ADMIN_SECRET);
             formData.append('action', 'delete');
             formData.append('sceneId', String(id));
 
             const resp = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
             if (!resp.ok) {
-                const err = await resp.json();
-                throw new Error(err.error || 'Delete failed');
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${resp.status}`);
             }
         } catch (e) {
             showAlert('Помилка видалення: ' + e.message, 'error');
@@ -440,15 +441,15 @@ async function processAndUpload() {
             if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
 
             const formData = new FormData();
-            formData.append('googleToken', currentCredential);
+            formData.append('apiSecret', CONFIG.ADMIN_SECRET);
             formData.append('action', 'upload');
             formData.append('sceneId', String(photoId));
             formData.append('file', selectedFile, `${photoId}.jpg`);
 
             const response = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Upload failed');
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${response.status}`);
             }
         } else {
             // LOCAL mode — download original file to computer

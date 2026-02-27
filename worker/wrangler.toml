@@ -10,4 +10,5 @@ bucket_name = "warinvr-panoramas"
 # Environment variables
 [vars]
 PUBLIC_URL = "https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev"
-GOOGLE_CLIENT_ID = "160253975823-l8hvle27hsh4ohboh3pj3kn9j2ilhnm0.apps.googleusercontent.com"
+# ADMIN_SECRET is stored as a Cloudflare secret (NOT here):
+#   wrangler secret put ADMIN_SECRET
