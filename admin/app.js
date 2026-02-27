@@ -1,7 +1,6 @@
 // Configuration
 const CONFIG = {
     GOOGLE_CLIENT_ID: '160253975823-l8hvle27hsh4ohboh3pj3kn9j2ilhnm0.apps.googleusercontent.com',
-    ALLOWED_EMAILS: [], // залиш порожнім — будь-який Google акаунт, або додай: ['you@gmail.com']
     UPLOAD_MODE: 'LOCAL', // 'LOCAL' або 'WORKER'
     WORKER_URL: '',        // для WORKER режиму
     R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
@@ -37,14 +36,8 @@ function initGoogleAuth() {
 
 function onGoogleSignIn(response) {
     const payload = parseJwt(response.credential);
-    const email = payload.email;
-
-    if (CONFIG.ALLOWED_EMAILS.length > 0 && !CONFIG.ALLOWED_EMAILS.includes(email)) {
-        showAlert(`Доступ заборонено для ${email}`, 'error');
-        return;
-    }
-    sessionSave({ email, name: payload.name, picture: payload.picture });
-    showMain(payload.name, email);
+    sessionSave({ email: payload.email, name: payload.name, picture: payload.picture });
+    showMain(payload.name, payload.email);
 }
 
 function showMain(name, email) {
