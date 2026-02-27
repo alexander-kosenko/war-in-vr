@@ -191,8 +191,7 @@ function createPhotoCard(id, filename) {
             <div class="card-info">
                 <div class="card-id">Фото #${id}</div>
                 <div class="card-url">${photoUrl}</div>
-                <div class="card-filename">${filename}
-                <div class="card-filename">${id}/picture/1.jpg</div>
+                <div class="card-filename">${filename}</div>
                 <div class="card-btns">
                     <button class="cbtn cbtn-replace" onclick="replacePhoto(${id})">&#9998; Замінити</button>
                     <button class="cbtn cbtn-delete" onclick="confirmDeletePhoto(${id})">✕ Видалити</button>
