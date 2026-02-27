@@ -35,10 +35,12 @@ function logout() {
 
 async function loadPhotos() {
     try {
-        const resp = await fetch('../photos.json?t=' + Date.now());
+        const resp = await fetch('/photos.json?t=' + Date.now());
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
         uploadedPhotos = (data.photos || []).map(Number);
     } catch (e) {
+        console.error('loadPhotos error:', e);
         uploadedPhotos = [];
     }
     renderGallery();
