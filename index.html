@@ -55,9 +55,14 @@
                 font-size: 1.3rem;
             }
         }
-    </style>
+</style>
 </head>
 <body>
+    <script>
+        // Redirect short QR links: /?id=N -> /photo/?id=N
+        const id = new URLSearchParams(window.location.search).get('id');
+        if (id) window.location.replace('/photo/?id=' + encodeURIComponent(id));
+    </script>
     <div class="container">
         <h1>War in VR</h1>
         <p class="quote">Mankind must put an end to war or war will put an end to mankind.</p>

@@ -262,8 +262,9 @@
         .card-qr {
             width: 90px;
             height: 90px;
-            border-radius: 4px;
+            border-radius: 0;
             display: block;
+            image-rendering: pixelated;
         }
 
         .card-url {
@@ -437,7 +438,7 @@
             <form onsubmit="authenticate(); return false;">
                 <div class="form-group">
                     <label for="password">Пароль:</label>
-                    <input type="password" id="password" placeholder="Введіть пароль доступу" autofocus>
+                    <input type="password" id="password" placeholder="Введіть пароль доступу" autocomplete="current-password" autofocus>
                 </div>
                 <button type="submit" class="btn btn-primary">Увійти</button>
             </form>
@@ -511,6 +512,6 @@
     <!-- qrcode-generator: reliable browser-native QR library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode_UTF8.js"></script>
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=9"></script>
 </body>
 </html>

@@ -100,11 +100,11 @@ function createPhotoCard(id) {
         </div>
     `;
 
-    // Render QR preview
+    // Render QR preview — larger margin (5 cells = thick white border)
     requestAnimationFrame(() => {
         try {
             const img = document.getElementById(`qr-preview-${id}`);
-            if (img) img.src = makeQRDataURL(photoUrl, 4, 3);
+            if (img) img.src = makeQRDataURL(photoUrl, 3, 5);
         } catch(e) { console.error('QR preview error', e); }
     });
 
@@ -162,6 +162,7 @@ async function deletePhoto(id) {
 
     // Remove from list and re-render
     uploadedPhotos = uploadedPhotos.filter(p => p !== id);
+    if (CONFIG.UPLOAD_MODE === 'LOCAL') lsSave([...uploadedPhotos]);
     renderGallery();
     showAlert(`Фото #${id} видалено${CONFIG.UPLOAD_MODE !== 'WORKER' ? ' (з інтерфейсу; видаліть файли з R2 вручну)' : ''}!`, 'success');
 }
@@ -169,7 +170,7 @@ async function deletePhoto(id) {
 // ─── QR helpers ───────────────────────────────────────────────────────────────
 
 function photoUrlFor(id) {
-    return `${CONFIG.SITE_URL}/photo/?id=${id}`;
+    return `${CONFIG.SITE_URL}/?id=${id}`;
 }
 
 /**
@@ -213,7 +214,7 @@ async function downloadQRForPhoto(id, format) {
 
     if (format === 'png') {
         try {
-            const dataUrl = makeQRDataURL(url, 12, 4); // ~600px
+            const dataUrl = makeQRDataURL(url, 14, 5); // ~14px/cell + 5-cell white border
             triggerDownload(dataURLtoBlob(dataUrl), `qr-photo-${id}.png`);
         } catch (e) {
             console.error(e);
@@ -221,7 +222,7 @@ async function downloadQRForPhoto(id, format) {
         }
     } else if (format === 'svg') {
         try {
-            const svg = makeQR(url).createSvgTag(10, 4);
+            const svg = makeQR(url).createSvgTag(10, 5);
             const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
             triggerDownload(blob, `qr-photo-${id}.svg`);
         } catch (e) {
@@ -301,6 +302,7 @@ async function processAndUpload() {
         // Add to gallery if not already present
         if (!uploadedPhotos.includes(photoId)) {
             uploadedPhotos.push(photoId);
+            if (CONFIG.UPLOAD_MODE === 'LOCAL') lsSave([...uploadedPhotos]);
             renderGallery();
         }
 
