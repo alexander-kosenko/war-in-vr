@@ -31,13 +31,17 @@ function logout() {
     hideAlert();
 }
 
-// ─── Load photos from photos.json ────────────────────────────────────────────
+// ─── Load photos ─────────────────────────────────────────────────────────────
+// Try R2's live photos.json first (updated by worker), fall back to static one
 
 async function loadPhotos() {
     const gallery = document.getElementById('gallery');
     if (gallery) gallery.innerHTML = '<p class="gallery-empty">Завантаження…</p>';
     try {
-        const resp = await fetch('/photos.json?t=' + Date.now());
+        // Prefer R2's version (kept up-to-date by worker)
+        const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
+        let resp = await fetch(r2Url);
+        if (!resp.ok) resp = await fetch('/photos.json?t=' + Date.now());
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
         uploadedPhotos = (data.photos || []).map(Number);
@@ -89,6 +93,10 @@ function createPhotoCard(id) {
                 <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'png')">↓ PNG</button>
                 <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'svg')">↓ SVG</button>
             </div>
+            <div class="card-actions">
+                <button class="btn-replace" onclick="replacePhoto(${id})">&#9998; Замінити</button>
+                <button class="btn-delete" onclick="confirmDeletePhoto(${id})">✕ Видалити</button>
+            </div>
         </div>
     `;
 
@@ -101,6 +109,61 @@ function createPhotoCard(id) {
     });
 
     return card;
+}
+
+// ─── Delete & Replace ────────────────────────────────────────────────────────
+
+function replacePhoto(id) {
+    const input = document.getElementById('photoId');
+    input.value = id;
+    document.getElementById('photoIdPreview').textContent = id;
+    document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showAlert(`Режим заміни: завантажте нове фото для #${id}`, 'success');
+}
+
+function confirmDeletePhoto(id) {
+    document.getElementById('confirmModal').style.display = 'flex';
+    document.getElementById('confirmText').textContent = `Видалити фото #${id}? Цю дію не можна відмінити.`;
+    document.getElementById('confirmOk').onclick = () => {
+        closeModal();
+        deletePhoto(id);
+    };
+}
+
+function closeModal() {
+    document.getElementById('confirmModal').style.display = 'none';
+}
+
+async function deletePhoto(id) {
+    const card = document.getElementById(`card-${id}`);
+    if (card) {
+        card.style.opacity = '0.4';
+        card.style.pointerEvents = 'none';
+    }
+
+    if (CONFIG.UPLOAD_MODE === 'WORKER' && CONFIG.WORKER_URL) {
+        try {
+            const formData = new FormData();
+            formData.append('password', CONFIG.ADMIN_PASSWORD);
+            formData.append('action', 'delete');
+            formData.append('sceneId', String(id));
+
+            const resp = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
+            if (!resp.ok) {
+                const err = await resp.json();
+                throw new Error(err.error || 'Delete failed');
+            }
+        } catch (e) {
+            showAlert('Помилка видалення: ' + e.message, 'error');
+            if (card) { card.style.opacity = ''; card.style.pointerEvents = ''; }
+            return;
+        }
+    }
+
+    // Remove from list and re-render
+    uploadedPhotos = uploadedPhotos.filter(p => p !== id);
+    renderGallery();
+    showAlert(`Фото #${id} видалено${CONFIG.UPLOAD_MODE !== 'WORKER' ? ' (з інтерфейсу; видаліть файли з R2 вручну)' : ''}!`, 'success');
 }
 
 // ─── QR helpers ───────────────────────────────────────────────────────────────
@@ -220,6 +283,7 @@ async function processAndUpload() {
 
             const formData = new FormData();
             formData.append('password', CONFIG.ADMIN_PASSWORD);
+            formData.append('action', 'upload');
             formData.append('sceneId', String(photoId));
             formData.append('file', selectedFile, `${photoId}.jpg`);
 

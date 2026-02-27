@@ -1,79 +1,104 @@
-// Cloudflare Worker для безпечного upload в R2
+// Cloudflare Worker для безпечного upload/delete в R2
 // Deploy: wrangler deploy
+
+const PHOTOS_JSON_KEY = 'photos.json';
+
+async function getPhotosList(bucket) {
+  try {
+    const obj = await bucket.get(PHOTOS_JSON_KEY);
+    if (!obj) return [];
+    const data = await obj.json();
+    return (data.photos || []).map(Number);
+  } catch {
+    return [];
+  }
+}
+
+async function savePhotosList(bucket, list) {
+  const sorted = [...new Set(list)].sort((a, b) => a - b);
+  const body = JSON.stringify({ photos: sorted, lastUpdated: new Date().toISOString().split('T')[0] });
+  await bucket.put(PHOTOS_JSON_KEY, body, { httpMetadata: { contentType: 'application/json' } });
+}
 
 export default {
   async fetch(request, env) {
-    // CORS headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
 
-    // Handle preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // Only accept POST
     if (request.method !== 'POST') {
-      return new Response('Method not allowed', { 
-        status: 405,
-        headers: corsHeaders 
-      });
+      return new Response('Method not allowed', { status: 405, headers: corsHeaders });
     }
 
     try {
       const formData = await request.formData();
-      
-      // Check password
+
       const password = formData.get('password');
       if (password !== env.ADMIN_PASSWORD) {
-        return new Response(JSON.stringify({ 
-          error: 'Невірний пароль' 
-        }), {
+        return new Response(JSON.stringify({ error: 'Невірний пароль' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      const sceneId = formData.get('sceneId');
-      const mobileFile = formData.get('mobile');
-      const desktopFile = formData.get('desktop');
-      const vrFile = formData.get('vr');
+      const action = formData.get('action') || 'upload';
+      const bucket = env.R2_BUCKET;
 
-      if (!sceneId || !mobileFile || !desktopFile || !vrFile) {
-        return new Response(JSON.stringify({ 
-          error: 'Відсутні необхідні файли' 
-        }), {
-          status: 400,
+      // ── DELETE ──────────────────────────────────────────────────────────────
+      if (action === 'delete') {
+        const sceneId = formData.get('sceneId');
+        if (!sceneId) {
+          return new Response(JSON.stringify({ error: 'Відсутній sceneId' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        await Promise.all([
+          bucket.delete(`${sceneId}/picture/1.jpg`),
+          bucket.delete(`${sceneId}/picture/mobile.webp`),
+          bucket.delete(`${sceneId}/picture/desktop.webp`),
+        ]);
+
+        const list = await getPhotosList(bucket);
+        await savePhotosList(bucket, list.filter(id => id !== Number(sceneId)));
+
+        return new Response(JSON.stringify({ success: true, message: `Фото ${sceneId} видалено` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Upload to R2
-      const bucket = env.R2_BUCKET;
-      
-      await bucket.put(`${sceneId}/picture/mobile.webp`, mobileFile);
-      await bucket.put(`${sceneId}/picture/desktop.webp`, desktopFile);
-      await bucket.put(`${sceneId}/picture/1.jpg`, vrFile);
+      // ── UPLOAD ──────────────────────────────────────────────────────────────
+      const sceneId = formData.get('sceneId');
+      const file = formData.get('file');
+
+      if (!sceneId || !file) {
+        return new Response(JSON.stringify({ error: 'Відсутні необхідні поля' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      await bucket.put(`${sceneId}/picture/1.jpg`, file);
+
+      const list = await getPhotosList(bucket);
+      if (!list.includes(Number(sceneId))) list.push(Number(sceneId));
+      await savePhotosList(bucket, list);
 
       return new Response(JSON.stringify({
         success: true,
-        message: `Сцена ${sceneId} успішно завантажена!`,
-        urls: {
-          vr: `${env.PUBLIC_URL}/${sceneId}/picture/1.jpg`,
-          desktop: `${env.PUBLIC_URL}/${sceneId}/picture/desktop.webp`,
-          mobile: `${env.PUBLIC_URL}/${sceneId}/picture/mobile.webp`
-        }
+        message: `Фото ${sceneId} завантажено!`,
+        url: `${env.PUBLIC_URL}/${sceneId}/picture/1.jpg`
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
 
     } catch (error) {
-      return new Response(JSON.stringify({ 
-        error: error.message 
-      }), {
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
