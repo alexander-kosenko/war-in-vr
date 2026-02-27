@@ -123,13 +123,26 @@ async function loadPhotos() {
             const saved = lsLoad();
             uploadedPhotos = saved !== null ? saved : base;
         } else {
-            // WORKER mode: спробуємо R2, якщо 404 — стаємо на статичний /photos.json
+            // WORKER mode: спробуємо R2, якщо 404 або порожньо — стаємо на статичний /photos.json
             const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
             let resp = await fetch(r2Url);
-            if (!resp.ok) resp = await fetch('/photos.json?t=' + Date.now());
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const data = await resp.json();
-            uploadedPhotos = (data.photos || []).map(Number);
+            if (resp.ok) {
+                const data = await resp.json();
+                const list = (data.photos || []).map(Number);
+                // Якщо R2 повернув порожній список — використовуємо статичний
+                if (list.length > 0) {
+                    uploadedPhotos = list;
+                } else {
+                    const fallback = await fetch('/photos.json?t=' + Date.now());
+                    const fdata = await fallback.json();
+                    uploadedPhotos = (fdata.photos || []).map(Number);
+                }
+            } else {
+                resp = await fetch('/photos.json?t=' + Date.now());
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
+                uploadedPhotos = (data.photos || []).map(Number);
+            }
         }
     } catch (e) {
         console.error('loadPhotos error:', e);

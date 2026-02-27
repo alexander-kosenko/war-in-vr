@@ -18,9 +18,19 @@ async function verifyGoogleToken(token, clientId) {
 async function getPhotosList(bucket) {
   try {
     const obj = await bucket.get(PHOTOS_JSON_KEY);
-    if (!obj) return [];
-    const data = await obj.json();
-    return (data.photos || []).map(Number);
+    if (obj) {
+      const data = await obj.json();
+      const list = (data.photos || []).map(Number);
+      // Якщо R2 повернув порожній список — можливо файл щойно створився порожнім, ігноруємо
+      if (list.length > 0) return list;
+    }
+    // Fallback: беремо статичний photos.json з сайту
+    const resp = await fetch(`${ALLOWED_ORIGIN}/photos.json`);
+    if (resp.ok) {
+      const data = await resp.json();
+      return (data.photos || []).map(Number);
+    }
+    return [];
   } catch {
     return [];
   }
