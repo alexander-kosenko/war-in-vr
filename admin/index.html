@@ -436,6 +436,7 @@
             <div class="alert" id="alert"></div>
 
             <form onsubmit="authenticate(); return false;">
+                <input type="text" name="username" value="admin" autocomplete="username" style="display:none">
                 <div class="form-group">
                     <label for="password">Пароль:</label>
                     <input type="password" id="password" placeholder="Введіть пароль доступу" autocomplete="current-password" autofocus>
@@ -512,6 +513,6 @@
     <!-- qrcode-generator: reliable browser-native QR library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode_UTF8.js"></script>
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>

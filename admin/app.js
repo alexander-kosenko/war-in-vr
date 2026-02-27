@@ -31,20 +31,42 @@ function logout() {
     hideAlert();
 }
 
+// ─── LocalStorage helpers ────────────────────────────────────────────────────
+const LS_KEY = 'war_in_vr_photos';
+
+function lsLoad() {
+    try {
+        const raw = localStorage.getItem(LS_KEY);
+        return raw ? JSON.parse(raw).map(Number) : null;
+    } catch { return null; }
+}
+
+function lsSave(list) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch {}
+}
+
 // ─── Load photos ─────────────────────────────────────────────────────────────
-// Try R2's live photos.json first (updated by worker), fall back to static one
 
 async function loadPhotos() {
     const gallery = document.getElementById('gallery');
     if (gallery) gallery.innerHTML = '<p class="gallery-empty">Завантаження…</p>';
     try {
-        // Prefer R2's version (kept up-to-date by worker)
-        const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
-        let resp = await fetch(r2Url);
-        if (!resp.ok) resp = await fetch('/photos.json?t=' + Date.now());
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
-        uploadedPhotos = (data.photos || []).map(Number);
+        if (CONFIG.UPLOAD_MODE === 'LOCAL') {
+            // In LOCAL mode: start from static photos.json, then overlay localStorage edits
+            const resp = await fetch('/photos.json?t=' + Date.now());
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            const base = (data.photos || []).map(Number);
+            const saved = lsLoad();
+            uploadedPhotos = saved !== null ? saved : base;
+        } else {
+            // WORKER mode: fetch live copy from R2
+            const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
+            const resp = await fetch(r2Url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            uploadedPhotos = (data.photos || []).map(Number);
+        }
     } catch (e) {
         console.error('loadPhotos error:', e);
         if (gallery) gallery.innerHTML = `<p class="gallery-empty" style="color:#c62828">Помилка завантаження: ${e.message}</p>`;
