@@ -1,6 +1,7 @@
 // Configuration
 const CONFIG = {
-    ADMIN_PASSWORD: 'war-in-vr-2024',
+    GOOGLE_CLIENT_ID: '160253975823-l8hvle27hsh4ohboh3pj3kn9j2ilhnm0.apps.googleusercontent.com',
+    ALLOWED_EMAILS: [], // залиш порожнім — будь-який Google акаунт, або додай: ['you@gmail.com']
     UPLOAD_MODE: 'LOCAL', // 'LOCAL' або 'WORKER'
     WORKER_URL: '',        // для WORKER режиму
     R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
@@ -10,25 +11,81 @@ const CONFIG = {
 let selectedFile = null;
 let uploadedPhotos = [];
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Auth (Google OAuth) ──────────────────────────────────────────────────────
+const SESSION_KEY = 'war_vr_admin_session';
 
-function authenticate() {
-    const password = document.getElementById('password').value;
-
-    if (password === CONFIG.ADMIN_PASSWORD) {
-        document.getElementById('authScreen').style.display = 'none';
-        document.getElementById('mainSection').style.display = 'block';
-        loadPhotos();
-    } else {
-        showAlert('Невірний пароль!', 'error');
+function initGoogleAuth() {
+    if (typeof google === 'undefined') {
+        setTimeout(initGoogleAuth, 200);
+        return;
     }
+    // Check saved session
+    const saved = sessionLoad();
+    if (saved) { showMain(saved.name, saved.email); return; }
+
+    google.accounts.id.initialize({
+        client_id: CONFIG.GOOGLE_CLIENT_ID,
+        callback: onGoogleSignIn,
+        auto_select: true,
+    });
+    google.accounts.id.renderButton(
+        document.getElementById('googleSignInBtn'),
+        { theme: 'filled_black', size: 'large', shape: 'rectangular', width: 280 }
+    );
+    google.accounts.id.prompt();
+}
+
+function onGoogleSignIn(response) {
+    const payload = parseJwt(response.credential);
+    const email = payload.email;
+
+    if (CONFIG.ALLOWED_EMAILS.length > 0 && !CONFIG.ALLOWED_EMAILS.includes(email)) {
+        showAlert(`Доступ заборонено для ${email}`, 'error');
+        return;
+    }
+    sessionSave({ email, name: payload.name, picture: payload.picture });
+    showMain(payload.name, email);
+}
+
+function showMain(name, email) {
+    document.getElementById('authScreen').style.display = 'none';
+    const ms = document.getElementById('mainSection');
+    ms.style.display = 'block';
+    const logo = ms.querySelector('.top-bar-logo');
+    if (logo) logo.title = email;
+    loadPhotos();
 }
 
 function logout() {
+    sessionClear();
+    if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('mainSection').style.display = 'none';
-    document.getElementById('password').value = '';
     hideAlert();
+    // Re-render button
+    if (typeof google !== 'undefined') {
+        google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onGoogleSignIn });
+        google.accounts.id.renderButton(
+            document.getElementById('googleSignInBtn'),
+            { theme: 'filled_black', size: 'large', shape: 'rectangular', width: 280 }
+        );
+    }
+}
+
+// ─── Session helpers ──────────────────────────────────────────────────────────
+function sessionSave(data) {
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(data)); } catch {}
+}
+function sessionLoad() {
+    try { const r = localStorage.getItem(SESSION_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function sessionClear() {
+    try { localStorage.removeItem(SESSION_KEY); } catch {}
+}
+
+function parseJwt(token) {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
 }
 
 // ─── LocalStorage helpers ────────────────────────────────────────────────────
@@ -435,7 +492,8 @@ function resetUploadForm() {
 // ─── DOMContentLoaded ─────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Photo ID live preview
+    // Ініціалізація Google OAuth
+    initGoogleAuth();
     const photoIdInput = document.getElementById('photoId');
     if (photoIdInput) {
         photoIdInput.addEventListener('input', function () {
