@@ -2,7 +2,6 @@
 // Auth: ADMIN_SECRET (Cloudflare secret, set via: wrangler secret put ADMIN_SECRET)
 // Deploy: cd worker && wrangler deploy
 
-const PHOTOS_JSON_KEY = 'photos.json';
 const ALLOWED_ORIGIN = 'https://vr-photo.pages.dev';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -20,39 +19,6 @@ function safeCompare(a, b) {
   return mismatch === 0;
 }
 
-/**
- * Returns the current photos list from R2.
- * R2 object exists and has items → use it.
- * R2 object doesn't exist or is empty → fall back to static site photos.json.
- */
-async function getPhotosList(bucket) {
-  try {
-    const obj = await bucket.get(PHOTOS_JSON_KEY);
-    if (obj) {
-      const data = await obj.json();
-      const list = (data.photos || []).map(Number).filter(n => n > 0);
-      if (list.length > 0) return list;
-    }
-  } catch { /* ignore parse errors, fall through */ }
-
-  // Fallback: fetch the static photos.json committed to the Pages site
-  try {
-    const resp = await fetch(`${ALLOWED_ORIGIN}/photos.json?t=${Date.now()}`);
-    if (resp.ok) {
-      const data = await resp.json();
-      return (data.photos || []).map(Number).filter(n => n > 0);
-    }
-  } catch { /* ignore */ }
-
-  return [];
-}
-
-async function savePhotosList(bucket, list) {
-  const sorted = [...new Set(list)].filter(n => n > 0).sort((a, b) => a - b);
-  const body = JSON.stringify({ photos: sorted, lastUpdated: new Date().toISOString().split('T')[0] });
-  await bucket.put(PHOTOS_JSON_KEY, body, { httpMetadata: { contentType: 'application/json' } });
-}
-
 // ── main handler ───────────────────────────────────────────────────────────────
 
 export default {
@@ -62,13 +28,40 @@ export default {
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Vary': 'Origin',
     };
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
+    // ── GET /photos → scan R2 bucket and return actual list ─────────────────
+    if (request.method === 'GET') {
+      try {
+        const bucket = env.R2_BUCKET;
+        const listed = await bucket.list();
+        
+        // Extract photo IDs from paths like "1/picture/1.jpg", "2/picture/1.jpg"
+        const photoIds = new Set();
+        for (const obj of listed.objects) {
+          const match = obj.key.match(/^(\d+)\/picture\/1\.jpg$/);
+          if (match) {
+            photoIds.add(Number(match[1]));
+          }
+        }
+        
+        const sorted = Array.from(photoIds).sort((a, b) => a - b);
+        return new Response(JSON.stringify({ photos: sorted }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('GET /photos error:', error);
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     if (request.method !== 'POST') {
@@ -105,9 +98,6 @@ export default {
           bucket.delete(`${sceneId}/picture/desktop.webp`),
         ]);
 
-        const list = await getPhotosList(bucket);
-        await savePhotosList(bucket, list.filter(id => id !== Number(sceneId)));
-
         return new Response(JSON.stringify({ success: true, message: `Фото ${sceneId} видалено` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -126,10 +116,6 @@ export default {
       await bucket.put(`${sceneId}/picture/1.jpg`, file, {
         httpMetadata: { contentType: file.type || 'image/jpeg' }
       });
-
-      const list = await getPhotosList(bucket);
-      if (!list.includes(Number(sceneId))) list.push(Number(sceneId));
-      await savePhotosList(bucket, list);
 
       return new Response(JSON.stringify({
         success: true,

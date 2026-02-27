@@ -128,20 +128,18 @@ async function loadPhotos() {
             const saved = lsLoad();
             uploadedPhotos = saved !== null ? saved : base;
         } else {
-            // WORKER mode: завантажуємо ТІЛЬКИ з R2 (актуальні фото)
-            const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
-            const resp = await fetch(r2Url);
+            // WORKER mode: запитуємо актуальний список фото з R2 через worker
+            const resp = await fetch(CONFIG.WORKER_URL, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
             
             if (resp.ok) {
                 const data = await resp.json();
                 uploadedPhotos = (data.photos || []).map(Number);
-                console.log('✓ Фото завантажено з R2:', uploadedPhotos.length);
-            } else if (resp.status === 404) {
-                // photos.json ще не існує на R2 - немає завантажених фото
-                uploadedPhotos = [];
-                console.log('ℹ️ photos.json не знайдено на R2 - галерея порожня');
+                console.log('✓ Актуальні фото з R2:', uploadedPhotos.length);
             } else {
-                throw new Error(`Помилка завантаження з R2: HTTP ${resp.status}`);
+                throw new Error(`Помилка отримання списку фото: HTTP ${resp.status}`);
             }
         }
     } catch (e) {
