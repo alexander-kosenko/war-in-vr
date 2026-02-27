@@ -127,35 +127,46 @@
         
         if (!photoId) {
             document.getElementById('error').classList.add('show');
-            document.getElementById('error').textContent = 'Invalid photo URL. Format: /photo/1/';
+            document.getElementById('error').textContent = 'Невірне посилання. Формат: /?id=1';
             document.getElementById('preloader').classList.add('hidden');
         } else {
             const panoramaUrl = `${R2_URL}/${photoId}/picture/1.jpg`;
             const panorama = document.getElementById('panorama');
-            
+
             // Update page title
-            document.title = `War in VR - Photo ${photoId}`;
-            
-            // Load panorama
-            panorama.setAttribute('src', panoramaUrl);
-            
-            // Hide preloader when loaded
-            panorama.addEventListener('materialtextureloaded', function() {
-                setTimeout(function() {
+            document.title = `War in VR - Фото ${photoId}`;
+
+            // Перевіряємо чи існує фото перед завантаженням
+            fetch(panoramaUrl, { method: 'HEAD' })
+                .then(resp => {
+                    if (!resp.ok) {
+                        document.getElementById('error').classList.add('show');
+                        document.getElementById('error').textContent = `Фото #${photoId} не існує`;
+                        document.getElementById('preloader').classList.add('hidden');
+                        return;
+                    }
+
+                    // Фото існує — завантажуємо
+                    panorama.setAttribute('src', panoramaUrl);
+
+                    let loadTimeout = setTimeout(function() {
+                        document.getElementById('error').classList.add('show');
+                        document.getElementById('error').textContent = `Фото #${photoId} не вдалось завантажити`;
+                        document.getElementById('preloader').classList.add('hidden');
+                    }, 20000);
+
+                    panorama.addEventListener('materialtextureloaded', function() {
+                        clearTimeout(loadTimeout);
+                        setTimeout(function() {
+                            document.getElementById('preloader').classList.add('hidden');
+                        }, 300);
+                    });
+                })
+                .catch(() => {
+                    document.getElementById('error').classList.add('show');
+                    document.getElementById('error').textContent = `Помилка завантаження фото #${photoId}`;
                     document.getElementById('preloader').classList.add('hidden');
-                }, 300);
-            });
-            
-            // Error handling
-            let loadTimeout = setTimeout(function() {
-                document.getElementById('error').classList.add('show');
-                document.getElementById('error').textContent = `Photo #${photoId} not found or failed to load`;
-                document.getElementById('preloader').classList.add('hidden');
-            }, 15000); // 15 seconds timeout
-            
-            panorama.addEventListener('materialtextureloaded', function() {
-                clearTimeout(loadTimeout);
-            });
+                });
         }
     </script>
 </body>
