@@ -8,26 +8,26 @@
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #0f0f0f;
-            --surface: #1a1a1a;
-            --surface2: #222;
-            --border: #2e2e2e;
-            --border-hover: #444;
-            --text: #f0f0f0;
-            --text-muted: #777;
-            --text-dim: #444;
+            --bg: #0a0a0a;
+            --surface: #161616;
+            --surface2: #202020;
+            --border: #383838;
+            --border-hover: #5a5a5a;
+            --text: #f5f5f5;
+            --text-muted: #999;
+            --text-dim: #555;
             --accent: #fff;
             --danger: #ff4444;
             --danger-hover: #cc2222;
-            --success-bg: #0d2e0d;
-            --success-border: #2e6e2e;
-            --success-text: #6fcf6f;
-            --error-bg: #2e0d0d;
-            --error-border: #6e2e2e;
-            --error-text: #ff8080;
+            --success-bg: #0a2e0a;
+            --success-border: #1e6e1e;
+            --success-text: #5ddf5d;
+            --error-bg: #2e0a0a;
+            --error-border: #7a2020;
+            --error-text: #ff7070;
             --radius: 12px;
             --radius-sm: 8px;
-            --shadow: 0 4px 24px rgba(0,0,0,.6);
+            --shadow: 0 4px 24px rgba(0,0,0,.7);
         }
 
         body {
@@ -134,10 +134,10 @@
         /* ── Section title ──────────────────────────────── */
         .section-title {
             font-size: .7rem;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: .12em;
             text-transform: uppercase;
-            color: var(--text-muted);
+            color: #aaa;
             margin-bottom: 14px;
         }
 
@@ -170,8 +170,8 @@
         label {
             display: block;
             margin-bottom: 7px;
-            font-weight: 500;
-            color: var(--text-muted);
+            font-weight: 600;
+            color: #aaa;
             font-size: .8rem;
             letter-spacing: .06em;
             text-transform: uppercase;
@@ -196,7 +196,7 @@
         input:focus { outline: none; border-color: #555; }
 
         .hint {
-            color: var(--text-dim);
+            color: var(--text-muted);
             font-size: .78rem;
             margin-top: 6px;
             font-family: 'SF Mono', 'Fira Code', monospace;
@@ -270,7 +270,7 @@
 
         .gallery-count {
             font-size: .75rem;
-            color: var(--text-muted);
+            color: #ccc;
             background: var(--surface2);
             border: 1px solid var(--border);
             padding: 3px 10px;
@@ -337,14 +337,14 @@
             font-size: .75rem;
             font-weight: 700;
             letter-spacing: .1em;
-            color: var(--text-muted);
+            color: #bbb;
             text-transform: uppercase;
             margin-bottom: 4px;
         }
 
         .card-url {
             font-size: .72rem;
-            color: var(--text-dim);
+            color: var(--text-muted);
             font-family: 'SF Mono', 'Fira Code', monospace;
             white-space: nowrap;
             overflow: hidden;
@@ -371,18 +371,18 @@
 
         .cbtn-outline {
             background: transparent;
-            color: var(--text-muted);
+            color: #aaa;
             border-color: var(--border);
         }
         .cbtn-outline:hover {
-            color: var(--text);
+            color: #fff;
             border-color: var(--border-hover);
             background: var(--surface2);
         }
 
         .cbtn-replace {
             background: transparent;
-            color: var(--text-muted);
+            color: #aaa;
             border-color: var(--border);
         }
         .cbtn-replace:hover {
@@ -393,8 +393,8 @@
 
         .cbtn-delete {
             background: transparent;
-            color: #884444;
-            border-color: #442222;
+            color: #aa5555;
+            border-color: #663333;
         }
         .cbtn-delete:hover {
             color: var(--danger);
@@ -677,6 +677,6 @@
     <!-- qrcode-generator: reliable browser-native QR library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode_UTF8.js"></script>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
 </body>
 </html>
