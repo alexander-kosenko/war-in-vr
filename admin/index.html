@@ -235,6 +235,154 @@
         .file-info.active { display: flex; align-items: center; gap: 8px; }
         #fileSize { color: var(--text-muted); font-size: .8rem; }
 
+        /* ── File list ──────────────────────────────────── */
+        .file-list {
+            margin-top: 12px;
+            display: none;
+        }
+
+        .file-list.active {
+            display: block;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            background: #f0f1f2;
+        }
+
+        .file-item-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .file-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-item-name {
+            font-weight: 500;
+            color: #333;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-item-meta {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .file-item-id {
+            font-weight: 600;
+            color: #007bff;
+        }
+
+        .file-item-remove {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #dc3545;
+            color: white;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .file-item-remove:hover {
+            background: #c82333;
+        }
+
+        /* ── Upload progress ────────────────────────────── */
+        .upload-progress {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .upload-progress.active {
+            display: block;
+        }
+
+        .progress-item {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+        }
+
+        .progress-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-item-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .progress-item-status {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .progress-item-status.uploading {
+            color: #007bff;
+        }
+
+        .progress-item-status.success {
+            color: #28a745;
+        }
+
+        .progress-item-status.error {
+            color: #dc3545;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s;
+            border-radius: 2px;
+        }
+
+        .progress-bar-fill.success {
+            background: #28a745;
+        }
+
+        .progress-bar-fill.error {
+            background: #dc3545;
+        }
+
         /* ── Buttons ────────────────────────────────────── */
         .btn {
             width: 100%;
@@ -594,19 +742,22 @@
                 <div class="file-upload" id="fileUpload" onclick="document.getElementById('fileInput').click()">
                     <div class="file-upload-icon">📷</div>
                     <div class="file-upload-text">
-                        Перетягніть 360° фото сюди<br>або натисніть для вибору
+                        Перетягніть 360° фото сюди<br>або натисніть для вибору (можна декілька)
                     </div>
                 </div>
-                <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+                <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)">
                 <div class="file-info" id="fileInfo">
                     <span id="fileName"></span>
                     <span id="fileSize"></span>
                 </div>
+                <div id="fileList" class="file-list"></div>
             </div>
 
             <button class="btn btn-primary" id="uploadBtn" onclick="processAndUpload()" disabled>
                 Завантажити
             </button>
+            <div id="uploadProgress" class="upload-progress"></div>
+            <div id="uploadProgress" class="upload-progress"></div>
         </div>
 
         <!-- Gallery -->

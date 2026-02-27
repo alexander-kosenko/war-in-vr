@@ -9,6 +9,7 @@ const CONFIG = {
 };
 
 let selectedFile = null;
+let selectedFiles = []; // Array of { file, id }
 let uploadedPhotos = [];
 let currentCredential = null; // Google ID token
 
@@ -399,7 +400,32 @@ function triggerDownload(blob, filename) {
 // ─── File selection ───────────────────────────────────────────────────────────
 
 function handleFileSelect(event) {
-    setSelectedFile(event.target.files[0]);
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Validate all files are images
+    const invalidFiles = files.filter(f => !f.type.startsWith('image/'));
+    if (invalidFiles.length > 0) {
+        showAlert('Всі файли повинні бути зображеннями', 'error');
+        return;
+    }
+
+    // Single file mode (backward compatibility)
+    if (files.length === 1) {
+        setSelectedFile(files[0]);
+        return;
+    }
+
+    // Multiple files mode
+    const startId = parseInt(document.getElementById('photoId').value);
+    selectedFiles = files.map((file, index) => ({
+        file,
+        id: startId + index
+    }));
+
+    renderFileList();
+    document.getElementById('uploadBtn').disabled = false;
+    document.getElementById('uploadBtn').textContent = `Завантажити ${files.length} фото`;
 }
 
 function setSelectedFile(file) {
@@ -408,15 +434,67 @@ function setSelectedFile(file) {
         return;
     }
     selectedFile = file;
+    selectedFiles = [];
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
     document.getElementById('fileInfo').classList.add('active');
+    document.getElementById('fileList').classList.remove('active');
     document.getElementById('uploadBtn').disabled = false;
+    document.getElementById('uploadBtn').textContent = 'Завантажити';
+}
+
+function renderFileList() {
+    const container = document.getElementById('fileList');
+    container.innerHTML = '';
+    
+    if (selectedFiles.length === 0) {
+        container.classList.remove('active');
+        document.getElementById('fileInfo').classList.remove('active');
+        return;
+    }
+
+    document.getElementById('fileInfo').classList.remove('active');
+    container.classList.add('active');
+
+    selectedFiles.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.innerHTML = `
+            <div class="file-item-icon">📷</div>
+            <div class="file-item-info">
+                <div class="file-item-name">${item.file.name}</div>
+                <div class="file-item-meta">
+                    <span class="file-item-id">ID: ${item.id}</span>
+                    <span>${(item.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                </div>
+            </div>
+            <button class="file-item-remove" onclick="removeFileFromList(${index})" title="Видалити">×</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function removeFileFromList(index) {
+    selectedFiles.splice(index, 1);
+    if (selectedFiles.length === 0) {
+        document.getElementById('uploadBtn').disabled = true;
+        document.getElementById('uploadBtn').textContent = 'Завантажити';
+    } else {
+        document.getElementById('uploadBtn').textContent = `Завантажити ${selectedFiles.length} фото`;
+    }
+    renderFileList();
 }
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 async function processAndUpload() {
+    // Multiple files mode
+    if (selectedFiles.length > 0) {
+        await uploadMultipleFiles();
+        return;
+    }
+
+    // Single file mode
     if (!selectedFile) {
         showAlert('Оберіть файл для завантаження', 'error');
         return;
@@ -434,26 +512,8 @@ async function processAndUpload() {
     hideAlert();
 
     try {
-        if (CONFIG.UPLOAD_MODE === 'WORKER') {
-            if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
-
-            const formData = new FormData();
-            formData.append('apiSecret', CONFIG.ADMIN_SECRET);
-            formData.append('action', 'upload');
-            formData.append('sceneId', String(photoId));
-            formData.append('file', selectedFile, `${photoId}.jpg`);
-
-            const response = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                throw new Error(err.error || `HTTP ${response.status}`);
-            }
-        } else {
-            // LOCAL mode — download original file to computer
-            triggerDownload(selectedFile, `photo-${photoId}.jpg`);
-            await new Promise(r => setTimeout(r, 400));
-        }
-
+        await uploadSingleFile(selectedFile, photoId);
+        
         // Add to gallery if not already present
         if (!uploadedPhotos.includes(photoId)) {
             uploadedPhotos.push(photoId);
@@ -478,6 +538,130 @@ async function processAndUpload() {
     }
 }
 
+async function uploadSingleFile(file, photoId) {
+    if (CONFIG.UPLOAD_MODE === 'WORKER') {
+        if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
+
+        const formData = new FormData();
+        formData.append('apiSecret', CONFIG.ADMIN_SECRET);
+        formData.append('action', 'upload');
+        formData.append('sceneId', String(photoId));
+        formData.append('file', file, `${photoId}.jpg`);
+
+        const response = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+    } else {
+        // LOCAL mode — download original file to computer
+        triggerDownload(file, `photo-${photoId}.jpg`);
+        await new Promise(r => setTimeout(r, 400));
+    }
+}
+
+async function uploadMultipleFiles() {
+    const uploadBtn = document.getElementById('uploadBtn');
+    const progressContainer = document.getElementById('uploadProgress');
+    
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Завантаження…';
+    progressContainer.innerHTML = '';
+    progressContainer.classList.add('active');
+    hideAlert();
+
+    const results = {
+        success: [],
+        failed: []
+    };
+
+    // Create progress items
+    const progressItems = selectedFiles.map(item => {
+        const div = document.createElement('div');
+        div.className = 'progress-item';
+        div.id = `progress-${item.id}`;
+        div.innerHTML = `
+            <div class="progress-item-header">
+                <div class="progress-item-title">Фото #${item.id} - ${item.file.name}</div>
+                <div class="progress-item-status uploading">Завантаження...</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        `;
+        progressContainer.appendChild(div);
+        return { id: item.id, div };
+    });
+
+    // Upload files sequentially
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const item = selectedFiles[i];
+        const progressItem = progressItems[i];
+        const statusEl = progressItem.div.querySelector('.progress-item-status');
+        const barEl = progressItem.div.querySelector('.progress-bar-fill');
+
+        try {
+            // Simulate progress
+            barEl.style.width = '50%';
+            
+            await uploadSingleFile(item.file, item.id);
+            
+            // Success
+            barEl.style.width = '100%';
+            barEl.classList.add('success');
+            statusEl.textContent = '✓ Завантажено';
+            statusEl.className = 'progress-item-status success';
+            
+            results.success.push(item.id);
+            
+            // Add to gallery if not already present
+            if (!uploadedPhotos.includes(item.id)) {
+                uploadedPhotos.push(item.id);
+            }
+
+        } catch (error) {
+            // Error
+            barEl.style.width = '100%';
+            barEl.classList.add('error');
+            statusEl.textContent = '✗ Помилка: ' + error.message;
+            statusEl.className = 'progress-item-status error';
+            results.failed.push({ id: item.id, error: error.message });
+        }
+    }
+
+    // Save and refresh gallery
+    if (CONFIG.UPLOAD_MODE === 'LOCAL') lsSave([...uploadedPhotos]);
+    renderGallery();
+
+    // Show summary
+    const successCount = results.success.length;
+    const failedCount = results.failed.length;
+    
+    if (successCount > 0 && failedCount === 0) {
+        showAlert(`✓ Всі фото успішно завантажено (${successCount})!`, 'success');
+    } else if (successCount > 0 && failedCount > 0) {
+        showAlert(`Завантажено ${successCount} фото, помилки: ${failedCount}`, 'error');
+    } else {
+        showAlert('Всі завантаження завершились помилкою', 'error');
+    }
+
+    // Reset form
+    setTimeout(() => {
+        resetUploadForm();
+        progressContainer.classList.remove('active');
+        
+        // Scroll to first uploaded photo
+        if (results.success.length > 0) {
+            const firstId = results.success[0];
+            const card = document.getElementById(`card-${firstId}`);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 2000);
+
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Завантажити';
+}
+
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 
 function showAlert(message, type) {
@@ -497,13 +681,17 @@ function hideAlert() {
 
 function resetUploadForm() {
     selectedFile = null;
+    selectedFiles = [];
     document.getElementById('fileInput').value = '';
     document.getElementById('fileInfo').classList.remove('active');
+    document.getElementById('fileList').classList.remove('active');
     document.getElementById('uploadBtn').disabled = true;
+    document.getElementById('uploadBtn').textContent = 'Завантажити';
 
-    // Increment photo ID
+    // Increment photo ID to next available
+    const maxId = uploadedPhotos.length > 0 ? Math.max(...uploadedPhotos) : 0;
     const photoIdInput = document.getElementById('photoId');
-    photoIdInput.value = parseInt(photoIdInput.value) + 1;
+    photoIdInput.value = maxId + 1;
     document.getElementById('photoIdPreview').textContent = photoIdInput.value;
 }
 
