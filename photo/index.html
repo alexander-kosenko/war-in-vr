@@ -104,9 +104,30 @@
         Photo not found
     </div>
     
-    <a-scene>
+    <a-scene renderer="antialias: true; colorManagement: true; sortObjects: true; physicallyCorrectLights: true; maxCanvasWidth: 1920; maxCanvasHeight: 1920;" 
+             vr-mode-ui="enabled: true">
         <a-sky id="panorama" rotation="0 -90 0"></a-sky>
     </a-scene>
+    
+    <script>
+        // Встановлюємо високу якість рендерингу одразу
+        document.addEventListener('DOMContentLoaded', function() {
+            const sceneEl = document.querySelector('a-scene');
+            if (sceneEl.hasLoaded) {
+                setHighQualityRendering();
+            } else {
+                sceneEl.addEventListener('loaded', setHighQualityRendering);
+            }
+        });
+        
+        function setHighQualityRendering() {
+            const sceneEl = document.querySelector('a-scene');
+            if (sceneEl.renderer) {
+                sceneEl.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Обмежуємо до 2x для продуктивності
+                console.log('Renderer pixelRatio set to:', sceneEl.renderer.getPixelRatio());
+            }
+        }
+    </script>
     
     <script>
         // Get photo ID from URL: /photo/1/ or /photo/?id=1
@@ -159,6 +180,36 @@
                         clearTimeout(loadTimeout);
                         setTimeout(function() {
                             document.getElementById('preloader').classList.add('hidden');
+                            
+                            // Покращення якості рендерингу
+                            const sceneEl = document.querySelector('a-scene');
+                            if (sceneEl.renderer) {
+                                sceneEl.renderer.setPixelRatio(window.devicePixelRatio);
+                            }
+                            
+                            // Автоматичний fullscreen на мобільних
+                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                            if (isMobile) {
+                                // Спробувати увійти в fullscreen після першого дотику
+                                const enterFullscreen = () => {
+                                    const elem = document.documentElement;
+                                    if (elem.requestFullscreen) {
+                                        elem.requestFullscreen().catch(err => console.log('Fullscreen denied:', err));
+                                    } else if (elem.webkitRequestFullscreen) { // Safari
+                                        elem.webkitRequestFullscreen();
+                                    } else if (elem.mozRequestFullScreen) { // Firefox
+                                        elem.mozRequestFullScreen();
+                                    } else if (elem.msRequestFullscreen) { // IE11
+                                        elem.msRequestFullscreen();
+                                    }
+                                    document.removeEventListener('touchstart', enterFullscreen);
+                                    document.removeEventListener('click', enterFullscreen);
+                                };
+                                
+                                // Додаємо слухачі для першого дотику/кліку
+                                document.addEventListener('touchstart', enterFullscreen, { once: true });
+                                document.addEventListener('click', enterFullscreen, { once: true });
+                            }
                         }, 300);
                     });
                 })
