@@ -1,14 +1,15 @@
 // Configuration
 const CONFIG = {
     GOOGLE_CLIENT_ID: '160253975823-l8hvle27hsh4ohboh3pj3kn9j2ilhnm0.apps.googleusercontent.com',
-    UPLOAD_MODE: 'LOCAL', // 'LOCAL' або 'WORKER'
-    WORKER_URL: '',        // для WORKER режиму
+    UPLOAD_MODE: 'WORKER',
+    WORKER_URL: 'https://war-in-vr-upload.vr-livingthewar.workers.dev',
     R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
     SITE_URL: window.location.origin
 };
 
 let selectedFile = null;
 let uploadedPhotos = [];
+let currentCredential = null; // Google ID token
 
 // ─── Auth (Google OAuth) ──────────────────────────────────────────────────────
 const SESSION_KEY = 'war_vr_admin_session';
@@ -18,15 +19,26 @@ function initGoogleAuth() {
         setTimeout(initGoogleAuth, 200);
         return;
     }
-    // Check saved session
-    const saved = sessionLoad();
-    if (saved) { showMain(saved.name, saved.email); return; }
-
+    // Завжди ініціалізуємо для авто-оновлення токена
     google.accounts.id.initialize({
         client_id: CONFIG.GOOGLE_CLIENT_ID,
         callback: onGoogleSignIn,
         auto_select: true,
     });
+
+    const saved = sessionLoad();
+    if (saved && saved.credential) {
+        // Перевіряємо чи токен ще дійсний (exp > now)
+        try {
+            const p = parseJwt(saved.credential);
+            if (p.exp * 1000 > Date.now()) {
+                currentCredential = saved.credential;
+                showMain(saved.name, saved.email);
+                return;
+            }
+        } catch {}
+    }
+
     google.accounts.id.renderButton(
         document.getElementById('googleSignInBtn'),
         { theme: 'filled_black', size: 'large', shape: 'rectangular', width: 280 }
@@ -35,8 +47,9 @@ function initGoogleAuth() {
 }
 
 function onGoogleSignIn(response) {
-    const payload = parseJwt(response.credential);
-    sessionSave({ email: payload.email, name: payload.name, picture: payload.picture });
+    currentCredential = response.credential;
+    const payload = parseJwt(currentCredential);
+    sessionSave({ email: payload.email, name: payload.name, credential: currentCredential });
     showMain(payload.name, payload.email);
 }
 
@@ -225,7 +238,7 @@ async function confirmReplace() {
         if (CONFIG.UPLOAD_MODE === 'WORKER') {
             if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
             const formData = new FormData();
-            formData.append('password', CONFIG.ADMIN_PASSWORD);
+            formData.append('googleToken', currentCredential);
             formData.append('action', 'upload');
             formData.append('sceneId', String(replaceTargetId));
             formData.append('file', replaceFile, `${replaceTargetId}.jpg`);
@@ -274,7 +287,7 @@ async function deletePhoto(id) {
     if (CONFIG.UPLOAD_MODE === 'WORKER' && CONFIG.WORKER_URL) {
         try {
             const formData = new FormData();
-            formData.append('password', CONFIG.ADMIN_PASSWORD);
+            formData.append('googleToken', currentCredential);
             formData.append('action', 'delete');
             formData.append('sceneId', String(id));
 
@@ -413,7 +426,7 @@ async function processAndUpload() {
             if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
 
             const formData = new FormData();
-            formData.append('password', CONFIG.ADMIN_PASSWORD);
+            formData.append('googleToken', currentCredential);
             formData.append('action', 'upload');
             formData.append('sceneId', String(photoId));
             formData.append('file', selectedFile, `${photoId}.jpg`);
