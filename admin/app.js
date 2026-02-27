@@ -312,11 +312,5 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Enter key on password field
-    const passwordInput = document.getElementById('password');
-    if (passwordInput) {
-        passwordInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') authenticate();
-        });
-    }
+// Enter key on password field handled by form onsubmit
 });
