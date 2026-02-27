@@ -9,7 +9,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #111;
             min-height: 100vh;
         }
 
@@ -66,18 +66,18 @@
         }
 
         .top-bar .logout-link {
-            color: rgba(255,255,255,.8);
+            color: rgba(255,255,255,.85);
             font-size: .9rem;
             cursor: pointer;
             text-decoration: none;
-            border: 1px solid rgba(255,255,255,.4);
+            border: 1px solid rgba(255,255,255,.5);
             padding: 6px 14px;
             border-radius: 8px;
             transition: background .2s;
         }
 
         .top-bar .logout-link:hover {
-            background: rgba(255,255,255,.15);
+            background: rgba(255,255,255,.12);
         }
 
         /* ── Card wrapper ──────────────────────────────── */
@@ -128,7 +128,7 @@
             transition: border-color .25s;
         }
 
-        input:focus { outline: none; border-color: #667eea; }
+        input:focus { outline: none; border-color: #111; }
 
         .hint {
             color: #888;
@@ -149,8 +149,8 @@
 
         .file-upload:hover,
         .file-upload.dragover {
-            border-color: #667eea;
-            background: #f0f4ff;
+            border-color: #111;
+            background: #f0f0f0;
         }
 
         .file-upload-icon { font-size: 2.4rem; margin-bottom: 8px; }
@@ -159,7 +159,7 @@
 
         .file-info {
             display: none;
-            background: #eef1ff;
+            background: #f0f0f0;
             padding: 12px 15px;
             border-radius: 10px;
             margin-top: 12px;
@@ -181,13 +181,13 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #111;
             color: #fff;
         }
 
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102,126,234,.35);
+            box-shadow: 0 8px 20px rgba(0,0,0,.35);
         }
 
         .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
@@ -285,10 +285,10 @@
         .btn-dl {
             flex: 1;
             padding: 7px 0;
-            border: 1.5px solid #667eea;
+            border: 1.5px solid #222;
             border-radius: 8px;
             background: #fff;
-            color: #667eea;
+            color: #222;
             font-size: .82rem;
             font-weight: 600;
             cursor: pointer;
@@ -296,7 +296,7 @@
         }
 
         .btn-dl:hover {
-            background: #667eea;
+            background: #222;
             color: #fff;
         }
 
@@ -312,10 +312,10 @@
         .btn-replace {
             flex: 1;
             padding: 7px 0;
-            border: 1.5px solid #667eea;
+            border: 1.5px solid #222;
             border-radius: 8px;
             background: #fff;
-            color: #667eea;
+            color: #222;
             font-size: .82rem;
             font-weight: 600;
             cursor: pointer;
@@ -323,7 +323,7 @@
         }
 
         .btn-replace:hover {
-            background: #667eea;
+            background: #222;
             color: #fff;
         }
 
@@ -463,7 +463,7 @@
             <div class="form-group">
                 <label for="photoId">Номер фото:</label>
                 <input type="number" id="photoId" min="1" max="9999" value="1">
-                <p class="hint">URL: /photo/?id=<span id="photoIdPreview">1</span></p>
+                <p class="hint">URL: /?id=<span id="photoIdPreview">1</span></p>
             </div>
 
             <div class="form-group">
@@ -513,6 +513,6 @@
     <!-- qrcode-generator: reliable browser-native QR library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode_UTF8.js"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>
