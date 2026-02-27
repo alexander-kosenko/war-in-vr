@@ -1,0 +1,10 @@
+## Admin panel — allow Google OAuth popups/postMessage
+/admin/*
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Embedder-Policy: unsafe-none
+
+## All other pages — default safe settings
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin

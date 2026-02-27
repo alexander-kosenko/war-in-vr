@@ -20,16 +20,18 @@ function initGoogleAuth() {
         setTimeout(initGoogleAuth, 200);
         return;
     }
-    // Завжди ініціалізуємо для авто-оновлення токена
+
     google.accounts.id.initialize({
         client_id: CONFIG.GOOGLE_CLIENT_ID,
         callback: onGoogleSignIn,
-        auto_select: true,
+        auto_select: false,          // не чіпаємо FedCM автоматично
+        cancel_on_tap_outside: false,
+        use_fedcm_for_prompt: false, // вимкнути FedCM (уникає AbortError + COOP)
     });
 
+    // Якщо є збережена сесія — відразу входимо без Google-промпту
     const saved = sessionLoad();
     if (saved && saved.credential) {
-        // Перевіряємо чи токен ще дійсний (exp > now)
         try {
             const p = parseJwt(saved.credential);
             if (p.exp * 1000 > Date.now()) {
@@ -38,13 +40,15 @@ function initGoogleAuth() {
                 return;
             }
         } catch {}
+        // Токен прострочений — очищаємо, показуємо кнопку (без prompt)
+        sessionClear();
     }
 
     google.accounts.id.renderButton(
         document.getElementById('googleSignInBtn'),
         { theme: 'filled_black', size: 'large', shape: 'rectangular', width: 280 }
     );
-    google.accounts.id.prompt();
+    // Не викликаємо prompt() — уникаємо FedCM throttle/AbortError
 }
 
 function onGoogleSignIn(response) {
@@ -65,13 +69,13 @@ function showMain(name, email) {
 
 function logout() {
     sessionClear();
+    currentCredential = null;
     if (typeof google !== 'undefined') google.accounts.id.disableAutoSelect();
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('mainSection').style.display = 'none';
     hideAlert();
-    // Re-render button
+    // Re-render Google button
     if (typeof google !== 'undefined') {
-        google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onGoogleSignIn });
         google.accounts.id.renderButton(
             document.getElementById('googleSignInBtn'),
             { theme: 'filled_black', size: 'large', shape: 'rectangular', width: 280 }
