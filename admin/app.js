@@ -82,17 +82,22 @@ function renderGallery() {
 
     if (uploadedPhotos.length === 0) {
         gallery.innerHTML = '<p class="gallery-empty">Немає завантажених фото</p>';
+        const badge = document.getElementById('galleryCount');
+        if (badge) badge.textContent = '0';
         return;
     }
 
     gallery.innerHTML = '';
-    [...uploadedPhotos].sort((a, b) => a - b).forEach(id => {
+    const sorted = [...uploadedPhotos].sort((a, b) => a - b);
+    sorted.forEach(id => {
         try {
             gallery.appendChild(createPhotoCard(id));
         } catch (e) {
             console.error('Card error #' + id, e);
         }
     });
+    const badge = document.getElementById('galleryCount');
+    if (badge) badge.textContent = sorted.length;
 }
 
 function createPhotoCard(id) {
@@ -106,18 +111,20 @@ function createPhotoCard(id) {
             <img class="card-photo" src="${r2Url}" alt="Photo #${id}" loading="lazy">
         </div>
         <div class="card-right">
-            <div class="card-id">#${id}</div>
-            <div class="card-qr-wrap">
+            <div class="card-info">
+                <div class="card-id">Фото #${id}</div>
+                <div class="card-url">${photoUrl}</div>
+                <div class="card-btns">
+                    <button class="cbtn cbtn-replace" onclick="replacePhoto(${id})">&#9998; Замінити</button>
+                    <button class="cbtn cbtn-delete" onclick="confirmDeletePhoto(${id})">✕ Видалити</button>
+                </div>
+            </div>
+            <div class="card-qr-col">
                 <img class="card-qr" id="qr-preview-${id}" alt="QR #${id}">
-            </div>
-            <div class="card-url">${photoUrl}</div>
-            <div class="card-buttons">
-                <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'png')">↓ PNG</button>
-                <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'svg')">↓ SVG</button>
-            </div>
-            <div class="card-actions">
-                <button class="btn-replace" onclick="replacePhoto(${id})">&#9998; Замінити</button>
-                <button class="btn-delete" onclick="confirmDeletePhoto(${id})">✕ Видалити</button>
+                <div class="qr-dl-row">
+                    <button class="cbtn cbtn-outline" onclick="downloadQRForPhoto(${id}, 'png')">PNG</button>
+                    <button class="cbtn cbtn-outline" onclick="downloadQRForPhoto(${id}, 'svg')">SVG</button>
+                </div>
             </div>
         </div>
     `;
@@ -135,25 +142,76 @@ function createPhotoCard(id) {
 
 // ─── Delete & Replace ────────────────────────────────────────────────────────
 
+let replaceTargetId = null;
+let replaceFile = null;
+
 function replacePhoto(id) {
-    const input = document.getElementById('photoId');
-    input.value = id;
-    document.getElementById('photoIdPreview').textContent = id;
-    document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    showAlert(`Режим заміни: завантажте нове фото для #${id}`, 'success');
+    replaceTargetId = id;
+    replaceFile = null;
+    document.getElementById('replaceModalSubtitle').textContent = `Фото #${id}`;
+    document.getElementById('replaceFileInfo').classList.remove('active');
+    document.getElementById('replaceFileInput').value = '';
+    document.getElementById('replaceConfirmBtn').disabled = true;
+    openModal('replaceModal');
+}
+
+function handleReplaceFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    replaceFile = file;
+    document.getElementById('replaceFileName').textContent = file.name;
+    document.getElementById('replaceFileSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+    document.getElementById('replaceFileInfo').classList.add('active');
+    document.getElementById('replaceConfirmBtn').disabled = false;
+}
+
+async function confirmReplace() {
+    if (!replaceFile || !replaceTargetId) return;
+    const btn = document.getElementById('replaceConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Завантаження…';
+
+    try {
+        if (CONFIG.UPLOAD_MODE === 'WORKER') {
+            if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
+            const formData = new FormData();
+            formData.append('password', CONFIG.ADMIN_PASSWORD);
+            formData.append('action', 'upload');
+            formData.append('sceneId', String(replaceTargetId));
+            formData.append('file', replaceFile, `${replaceTargetId}.jpg`);
+            const response = await fetch(CONFIG.WORKER_URL, { method: 'POST', body: formData });
+            if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Upload failed'); }
+        } else {
+            triggerDownload(replaceFile, `photo-${replaceTargetId}.jpg`);
+            await new Promise(r => setTimeout(r, 400));
+        }
+        closeModal('replaceModal');
+        showAlert(`Фото #${replaceTargetId} замінено!`, 'success');
+    } catch (e) {
+        showAlert('Помилка: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Замінити';
+    }
+}
+
+function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'flex'; el.classList.add('open'); }
+}
+
+function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.classList.remove('open'); }
 }
 
 function confirmDeletePhoto(id) {
-    document.getElementById('confirmModal').style.display = 'flex';
-    document.getElementById('confirmText').textContent = `Видалити фото #${id}? Цю дію не можна відмінити.`;
+    document.getElementById('confirmText').textContent = `Фото #${id}`;
     document.getElementById('confirmOk').onclick = () => {
-        closeModal();
+        closeModal('confirmModal');
         deletePhoto(id);
     };
-}
-
-function closeModal() {
-    document.getElementById('confirmModal').style.display = 'none';
+    openModal('confirmModal');
 }
 
 async function deletePhoto(id) {
@@ -399,6 +457,29 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             fileUpload.classList.remove('dragover');
             setSelectedFile(e.dataTransfer.files[0]);
+        });
+    }
+
+    // Drag & drop — replace zone
+    const replaceUpload = document.getElementById('replaceFileUpload');
+    if (replaceUpload) {
+        replaceUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            replaceUpload.classList.add('dragover');
+        });
+        replaceUpload.addEventListener('dragleave', () => {
+            replaceUpload.classList.remove('dragover');
+        });
+        replaceUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            replaceUpload.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            replaceFile = file;
+            document.getElementById('replaceFileName').textContent = file.name;
+            document.getElementById('replaceFileSize').textContent = `${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            document.getElementById('replaceFileInfo').classList.add('active');
+            document.getElementById('replaceConfirmBtn').disabled = false;
         });
     }
 
