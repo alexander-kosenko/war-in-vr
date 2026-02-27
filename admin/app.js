@@ -67,7 +67,9 @@ function createPhotoCard(id) {
     card.id = `card-${id}`;
     card.innerHTML = `
         <div class="card-id">#${id}</div>
-        <canvas class="card-qr" id="qr-preview-${id}" width="200" height="200"></canvas>
+        <div class="card-qr-wrap">
+            <img class="card-qr" id="qr-preview-${id}" alt="QR #${id}">
+        </div>
         <div class="card-url">${photoUrl}</div>
         <div class="card-buttons">
             <button class="btn-dl" onclick="downloadQRForPhoto(${id}, 'png')">↓ PNG</button>
@@ -75,8 +77,17 @@ function createPhotoCard(id) {
         </div>
     `;
 
-    requestAnimationFrame(() => {
-        drawQRWithBorder(document.getElementById(`qr-preview-${id}`), photoUrl, 200, 16);
+    // Render QR as data URL into the img tag
+    QRCode.toDataURL(photoUrl, {
+        width: 240,
+        margin: 3,
+        color: { dark: '#000000', light: '#ffffff' },
+        errorCorrectionLevel: 'H'
+    }, function(err, url) {
+        if (!err) {
+            const img = document.getElementById(`qr-preview-${id}`);
+            if (img) img.src = url;
+        }
     });
 
     return card;
@@ -89,56 +100,31 @@ function photoUrlFor(id) {
 }
 
 /**
- * Draws a QR code onto `canvas` with a clean white border (padding px each side).
+ * Generates a high-res PNG blob via toDataURL (600px, margin=3).
  */
-function drawQRWithBorder(canvas, text, totalSize, padding) {
-    const qrSize = totalSize - padding * 2;
-    const tempCanvas = document.createElement('canvas');
-
-    QRCode.toCanvas(tempCanvas, text, {
-        width: qrSize,
-        margin: 0,
-        color: { dark: '#000000', light: '#ffffff' },
-        errorCorrectionLevel: 'H'
-    }, function (err) {
-        if (err) { console.error(err); return; }
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, totalSize, totalSize);
-        ctx.drawImage(tempCanvas, padding, padding, qrSize, qrSize);
-    });
-}
-
-/**
- * Generates a high-res QR canvas with border and returns a PNG Blob.
- */
-function qrToPngBlob(text, size, padding) {
+function qrToPngBlob(text) {
     return new Promise((resolve, reject) => {
-        const qrSize = size - padding * 2;
-        const tempCanvas = document.createElement('canvas');
-
-        QRCode.toCanvas(tempCanvas, text, {
-            width: qrSize,
-            margin: 0,
+        QRCode.toDataURL(text, {
+            width: 600,
+            margin: 3,
             color: { dark: '#000000', light: '#ffffff' },
             errorCorrectionLevel: 'H'
-        }, function (err) {
+        }, function(err, dataUrl) {
             if (err) { reject(err); return; }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = size;
-            canvas.height = size;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, size, size);
-            ctx.drawImage(tempCanvas, padding, padding, qrSize, qrSize);
-            canvas.toBlob(resolve, 'image/png');
+            // Convert data URL to Blob
+            const arr = dataUrl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8 = new Uint8Array(n);
+            while (n--) u8[n] = bstr.charCodeAt(n);
+            resolve(new Blob([u8], { type: mime }));
         });
     });
 }
 
 /**
- * Generates an SVG string with white border (margin: 3 = ~3 module-widths of white space).
+ * Generates an SVG string with white border (margin: 3).
  */
 function qrToSvg(text) {
     return new Promise((resolve, reject) => {
@@ -147,7 +133,7 @@ function qrToSvg(text) {
             margin: 3,
             color: { dark: '#000000', light: '#ffffff' },
             errorCorrectionLevel: 'H'
-        }, function (err, svgString) {
+        }, function(err, svgString) {
             if (err) { reject(err); return; }
             resolve(svgString);
         });
@@ -161,7 +147,7 @@ async function downloadQRForPhoto(id, format) {
 
     if (format === 'png') {
         try {
-            const blob = await qrToPngBlob(url, 600, 40);
+            const blob = await qrToPngBlob(url);
             triggerDownload(blob, `qr-photo-${id}.png`);
         } catch (e) {
             console.error(e);
