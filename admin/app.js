@@ -123,9 +123,10 @@ async function loadPhotos() {
             const saved = lsLoad();
             uploadedPhotos = saved !== null ? saved : base;
         } else {
-            // WORKER mode: fetch live copy from R2
+            // WORKER mode: спробуємо R2, якщо 404 — стаємо на статичний /photos.json
             const r2Url = `${CONFIG.R2_PUBLIC_URL}/photos.json?t=${Date.now()}`;
-            const resp = await fetch(r2Url);
+            let resp = await fetch(r2Url);
+            if (!resp.ok) resp = await fetch('/photos.json?t=' + Date.now());
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const data = await resp.json();
             uploadedPhotos = (data.photos || []).map(Number);
