@@ -34,6 +34,8 @@ function logout() {
 // ─── Load photos from photos.json ────────────────────────────────────────────
 
 async function loadPhotos() {
+    const gallery = document.getElementById('gallery');
+    if (gallery) gallery.innerHTML = '<p class="gallery-empty">Завантаження…</p>';
     try {
         const resp = await fetch('/photos.json?t=' + Date.now());
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -41,6 +43,7 @@ async function loadPhotos() {
         uploadedPhotos = (data.photos || []).map(Number);
     } catch (e) {
         console.error('loadPhotos error:', e);
+        if (gallery) gallery.innerHTML = `<p class="gallery-empty" style="color:#c62828">Помилка завантаження: ${e.message}</p>`;
         uploadedPhotos = [];
     }
     renderGallery();
@@ -58,7 +61,11 @@ function renderGallery() {
 
     gallery.innerHTML = '';
     [...uploadedPhotos].sort((a, b) => a - b).forEach(id => {
-        gallery.appendChild(createPhotoCard(id));
+        try {
+            gallery.appendChild(createPhotoCard(id));
+        } catch (e) {
+            console.error('Card error #' + id, e);
+        }
     });
 }
 
@@ -83,17 +90,12 @@ function createPhotoCard(id) {
         </div>
     `;
 
-    // Render QR as data URL into the img tag
-    QRCode.toDataURL(photoUrl, {
-        width: 240,
-        margin: 3,
-        color: { dark: '#000000', light: '#ffffff' },
-        errorCorrectionLevel: 'H'
-    }, function(err, url) {
-        if (!err) {
+    // Render QR preview
+    requestAnimationFrame(() => {
+        try {
             const img = document.getElementById(`qr-preview-${id}`);
-            if (img) img.src = url;
-        }
+            if (img) img.src = makeQRDataURL(photoUrl, 4, 3);
+        } catch(e) { console.error('QR preview error', e); }
     });
 
     return card;
@@ -106,62 +108,55 @@ function photoUrlFor(id) {
 }
 
 /**
- * Generates a high-res PNG blob via toDataURL (600px, margin=3).
+ * Creates a QR object using qrcode-generator.
  */
-function qrToPngBlob(text) {
-    return new Promise((resolve, reject) => {
-        QRCode.toDataURL(text, {
-            width: 600,
-            margin: 3,
-            color: { dark: '#000000', light: '#ffffff' },
-            errorCorrectionLevel: 'H'
-        }, function(err, dataUrl) {
-            if (err) { reject(err); return; }
-            // Convert data URL to Blob
-            const arr = dataUrl.split(',');
-            const mime = arr[0].match(/:(.*?);/)[1];
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8 = new Uint8Array(n);
-            while (n--) u8[n] = bstr.charCodeAt(n);
-            resolve(new Blob([u8], { type: mime }));
-        });
-    });
+function makeQR(text) {
+    const qr = qrcode(0, 'H');
+    qr.addData(text);
+    qr.make();
+    return qr;
 }
 
 /**
- * Generates an SVG string with white border (margin: 3).
+ * Returns a PNG data URL with the given cellSize and margin (in cells).
  */
-function qrToSvg(text) {
-    return new Promise((resolve, reject) => {
-        QRCode.toString(text, {
-            type: 'svg',
-            margin: 3,
-            color: { dark: '#000000', light: '#ffffff' },
-            errorCorrectionLevel: 'H'
-        }, function(err, svgString) {
-            if (err) { reject(err); return; }
-            resolve(svgString);
-        });
-    });
+function makeQRDataURL(text, cellSize, margin) {
+    return makeQR(text).createDataURL(cellSize, margin);
+}
+
+/**
+ * Converts a data URL string to a Blob.
+ */
+function dataURLtoBlob(dataUrl) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8 = new Uint8Array(n);
+    while (n--) u8[n] = bstr.charCodeAt(n);
+    return new Blob([u8], { type: mime });
 }
 
 // ─── Download QR for a specific photo ────────────────────────────────────────
 
 async function downloadQRForPhoto(id, format) {
+    if (typeof qrcode === 'undefined') {
+        showAlert('Бібліотека QR-коду не завантажилася. Перезавантажте сторінку.', 'error');
+        return;
+    }
     const url = photoUrlFor(id);
 
     if (format === 'png') {
         try {
-            const blob = await qrToPngBlob(url);
-            triggerDownload(blob, `qr-photo-${id}.png`);
+            const dataUrl = makeQRDataURL(url, 12, 4); // ~600px
+            triggerDownload(dataURLtoBlob(dataUrl), `qr-photo-${id}.png`);
         } catch (e) {
             console.error(e);
             showAlert('Не вдалося згенерувати PNG', 'error');
         }
     } else if (format === 'svg') {
         try {
-            const svg = await qrToSvg(url);
+            const svg = makeQR(url).createSvgTag(10, 4);
             const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
             triggerDownload(blob, `qr-photo-${id}.svg`);
         } catch (e) {
