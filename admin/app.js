@@ -65,8 +65,12 @@ function createPhotoCard(id) {
     const card = document.createElement('div');
     card.className = 'photo-card';
     card.id = `card-${id}`;
+    const r2Url = `${CONFIG.R2_PUBLIC_URL}/${id}/picture/1.jpg`;
     card.innerHTML = `
         <div class="card-id">#${id}</div>
+        <div class="card-photo-wrap">
+            <img class="card-photo" src="${r2Url}" alt="Photo #${id}" loading="lazy">
+        </div>
         <div class="card-qr-wrap">
             <img class="card-qr" id="qr-preview-${id}" alt="QR #${id}">
         </div>
