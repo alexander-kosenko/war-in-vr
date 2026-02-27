@@ -720,7 +720,33 @@ document.addEventListener('DOMContentLoaded', function () {
         fileUpload.addEventListener('drop', (e) => {
             e.preventDefault();
             fileUpload.classList.remove('dragover');
-            setSelectedFile(e.dataTransfer.files[0]);
+            
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length === 0) return;
+
+            // Validate all files are images
+            const invalidFiles = files.filter(f => !f.type.startsWith('image/'));
+            if (invalidFiles.length > 0) {
+                showAlert('Всі файли повинні бути зображеннями', 'error');
+                return;
+            }
+
+            // Single file mode
+            if (files.length === 1) {
+                setSelectedFile(files[0]);
+                return;
+            }
+
+            // Multiple files mode
+            const startId = parseInt(document.getElementById('photoId').value);
+            selectedFiles = files.map((file, index) => ({
+                file,
+                id: startId + index
+            }));
+
+            renderFileList();
+            document.getElementById('uploadBtn').disabled = false;
+            document.getElementById('uploadBtn').textContent = `Завантажити ${files.length} фото`;
         });
     }
 
