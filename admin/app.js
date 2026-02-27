@@ -164,7 +164,8 @@ function renderGallery() {
         return;
     }
 
-    gallery.innerHTML = '';.id - b.id);
+    gallery.innerHTML = '';
+    const sorted = [...uploadedPhotos].sort((a, b) => a.id - b.id);
     sorted.forEach(photo => {
         try {
             gallery.appendChild(createPhotoCard(photo.id, photo.filename));
