@@ -6,22 +6,13 @@
     <title>War in VR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            overflow: hidden;
-            background: #000;
-        }
+        * { margin: 0; padding: 0; }
+        body { overflow: hidden; background: #000; }
         
         .preloader {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: #000;
             display: flex;
             flex-direction: column;
@@ -30,22 +21,10 @@
             z-index: 9999;
             transition: opacity 0.5s ease;
         }
+        .preloader.hidden { opacity: 0; pointer-events: none; }
         
-        .preloader.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        .spinner {
-            width: 70px;
-            height: 70px;
-            margin-bottom: 20px;
-        }
-        
-        .spinner svg {
-            width: 100%;
-            height: 100%;
-        }
+        .spinner { width: 70px; height: 70px; margin-bottom: 20px; }
+        .spinner svg { width: 100%; height: 100%; }
         
         .spinner-text {
             color: #fff;
@@ -57,8 +36,7 @@
         
         .error {
             position: fixed;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(255, 0, 0, 0.9);
             color: #fff;
@@ -70,10 +48,7 @@
             z-index: 10000;
             display: none;
         }
-        
-        .error.show {
-            display: block;
-        }
+        .error.show { display: block; }
     </style>
 </head>
 <body>
@@ -100,139 +75,18 @@
         <div class="spinner-text">LOADING PHOTO 360°</div>
     </div>
     
-    <div class="error" id="error">
-        Photo not found
-    </div>
+    <div class="error" id="error">Photo not found</div>
     
-    <a-scene renderer="antialias: true;" vr-mode-ui="enabled: true">
-        <a-assets>
-            <img id="panorama-img" crossorigin="anonymous">
-        </a-assets>
-        <a-sky id="panorama" src="#panorama-img" rotation="0 -90 0" adaptive-texture></a-sky>
+    <a-scene>
+        <a-sky id="panorama" rotation="0 -90 0"></a-sky>
     </a-scene>
     
     <script>
-        // Визначення потужності пристрою
-        function getDeviceCapability() {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const memory = navigator.deviceMemory || 4; // GB RAM (за замовчуванням 4)
-            const cores = navigator.hardwareConcurrency || 2;
-            
-            // Визначаємо рівень продуктивності
-            if (!isMobile) {
-                return { type: 'desktop', quality: 'high' };
-            }
-            
-            // Мобільні пристрої
-            if (memory >= 6 && cores >= 6) {
-                return { type: 'mobile', quality: 'high' }; // Флагмани (iPhone 13+, Samsung S21+)
-            } else if (memory >= 4 && cores >= 4) {
-                return { type: 'mobile', quality: 'medium' }; // Середні телефони
-            } else {
-                return { type: 'mobile', quality: 'low' }; // Старі/слабкі телефони
-            }
-        }
-        
-        // Налаштування в залежності від потужності
-        function getQualitySettings(capability) {
-            const settings = {
-                high: {
-                    maxCanvasSize: 8192,
-                    anisotropy: 16,
-                    pixelRatio: Math.min(window.devicePixelRatio, 2),
-                    preferFormat: 'desktop.webp' // WebP для швидкого завантаження
-                },
-                medium: {
-                    maxCanvasSize: 4096,
-                    anisotropy: 8,
-                    pixelRatio: Math.min(window.devicePixelRatio, 1.5),
-                    preferFormat: 'mobile.webp'
-                },
-                low: {
-                    maxCanvasSize: 2048,
-                    anisotropy: 4,
-                    pixelRatio: 1,
-                    preferFormat: 'mobile.webp'
-                }
-            };
-            
-            return settings[capability.quality];
-        }
-        
-        // Компонент для високої якості текстур (адаптивний)
-        AFRAME.registerComponent('adaptive-texture', {
-            schema: {
-                anisotropy: { type: 'number', default: 16 }
-            },
-            init: function() {
-                this.el.addEventListener('materialtextureloaded', (e) => {
-                    const material = this.el.getObject3D('mesh').material;
-                    if (material.map) {
-                        material.map.minFilter = THREE.LinearFilter;
-                        material.map.magFilter = THREE.LinearFilter;
-                        material.map.anisotropy = this.data.anisotropy;
-                        material.map.needsUpdate = true;
-                        console.log('✓ Texture anisotropy:', this.data.anisotropy);
-                    }
-                });
-            }
-        });
-        
-        // Глобальні налаштування
-        const DEVICE = getDeviceCapability();
-        const QUALITY = getQualitySettings(DEVICE);
-        
-        console.log('Device:', DEVICE.type, '| Quality:', DEVICE.quality);
-        console.log('Settings:', QUALITY);
-        
-        // Встановлюємо високу якість рендерингу одразу
-        document.addEventListener('DOMContentLoaded', function() {
-            const sceneEl = document.querySelector('a-scene');
-            
-            // Оновлюємо renderer налаштування
-            sceneEl.setAttribute('renderer', {
-                antialias: true,
-                colorManagement: true,
-                sortObjects: true,
-                physicallyCorrectLights: true,
-                maxCanvasWidth: QUALITY.maxCanvasSize,
-                maxCanvasHeight: QUALITY.maxCanvasSize,
-                precision: 'highp'
-            });
-            
-            if (sceneEl.hasLoaded) {
-                setAdaptiveRendering();
-            } else {
-                sceneEl.addEventListener('loaded', setAdaptiveRendering);
-            }
-        });
-        
-        function setAdaptiveRendering() {
-            const sceneEl = document.querySelector('a-scene');
-            if (sceneEl.renderer) {
-                sceneEl.renderer.setPixelRatio(QUALITY.pixelRatio);
-                const maxAnisotropy = sceneEl.renderer.capabilities.getMaxAnisotropy();
-                console.log('Max anisotropy:', maxAnisotropy, '| Using:', QUALITY.anisotropy);
-                console.log('Renderer pixelRatio:', sceneEl.renderer.getPixelRatio());
-            }
-            
-            // Оновлюємо компонент на sky
-            const sky = document.getElementById('panorama');
-            if (sky) {
-                sky.setAttribute('adaptive-texture', { anisotropy: QUALITY.anisotropy });
-            }
-        }
-    </script>
-    
-    <script>
-        // Get photo ID from URL: /photo/1/ or /photo/?id=1
         function getPhotoId() {
-            // Try URL parameter first (for local testing)
             const urlParams = new URLSearchParams(window.location.search);
             const idParam = urlParams.get('id');
             if (idParam) return idParam;
             
-            // Try path-based ID (for production with URL rewrite)
             const path = window.location.pathname;
             const match = path.match(/\/photo\/(\d+)/);
             return match ? match[1] : null;
@@ -246,114 +100,39 @@
             document.getElementById('error').textContent = 'Невірне посилання. Формат: /?id=1';
             document.getElementById('preloader').classList.add('hidden');
         } else {
-            const panoramaImg = document.getElementById('panorama-img');
+            const panoramaUrl = `${R2_URL}/${photoId}/picture/1.jpg`;
             const panorama = document.getElementById('panorama');
-
-            // Update page title
+            
             document.title = `War in VR - Фото ${photoId}`;
-
-            // Спробувати завантажити оптимізовану версію, fallback на 1.jpg
-            async function loadPanorama() {
-                const optimizedUrl = `${R2_URL}/${photoId}/picture/${QUALITY.preferFormat}`;
-                const fallbackUrl = `${R2_URL}/${photoId}/picture/1.jpg`;
-                
-                let finalUrl = fallbackUrl;
-                
-                // Спробувати оптимізовану версію (mobile.webp або desktop.webp)
-                try {
-                    const checkOptimized = await fetch(optimizedUrl, { method: 'HEAD' });
-                    if (checkOptimized.ok) {
-                        finalUrl = optimizedUrl;
-                        console.log('✓ Using optimized format:', QUALITY.preferFormat);
-                    } else {
-                        console.log('ℹ️ Optimized format not found, using 1.jpg');
-                    }
-                } catch (e) {
-                    console.log('ℹ️ Fallback to 1.jpg');
-                }
-                
-                // Перевіряємо чи існує fallback
-                try {
-                    const checkFallback = await fetch(fallbackUrl, { method: 'HEAD' });
-                    if (!checkFallback.ok) {
+            
+            fetch(panoramaUrl, { method: 'HEAD' })
+                .then(resp => {
+                    if (!resp.ok) {
                         document.getElementById('error').classList.add('show');
                         document.getElementById('error').textContent = `Фото #${photoId} не існує`;
                         document.getElementById('preloader').classList.add('hidden');
                         return;
                     }
-                } catch (e) {
-                    document.getElementById('error').classList.add('show');
-                    document.getElementById('error').textContent = `Помилка завантаження фото #${photoId}`;
-                    document.getElementById('preloader').classList.add('hidden');
-                    return;
-                }
-
-                // Завантажуємо вибране зображення
-                panoramaImg.src = finalUrl;
-
-                let loadTimeout = setTimeout(function() {
-                    document.getElementById('error').classList.add('show');
-                    document.getElementById('error').textContent = `Фото #${photoId} не вдалось завантажити`;
-                    document.getElementById('preloader').classList.add('hidden');
-                }, 30000); // 30 сек для великих файлів
-
-                // Чекаємо завантаження IMAGE елемента
-                panoramaImg.addEventListener('load', function() {
-                    clearTimeout(loadTimeout);
-                    const size = panoramaImg.naturalWidth + 'x' + panoramaImg.naturalHeight;
-                    console.log('✓ Panorama loaded:', size, '| File:', finalUrl.split('/').pop());
                     
-                    // Приховуємо preloader
-                    setTimeout(function() {
+                    panorama.setAttribute('src', panoramaUrl);
+                    
+                    let loadTimeout = setTimeout(() => {
+                        document.getElementById('error').classList.add('show');
+                        document.getElementById('error').textContent = `Помилка завантаження фото #${photoId}`;
                         document.getElementById('preloader').classList.add('hidden');
-                    }, 300);
+                    }, 30000);
                     
-                    // Автоматичний fullscreen на мобільних - після короткої затримки
-                    if (DEVICE.type === 'mobile') {
-                        setTimeout(() => {
-                            const enterFullscreen = () => {
-                                const elem = document.documentElement;
-                                const promise = elem.requestFullscreen 
-                                    ? elem.requestFullscreen()
-                                    : elem.webkitRequestFullscreen 
-                                    ? elem.webkitRequestFullscreen()
-                                    : elem.mozRequestFullScreen 
-                                    ? elem.mozRequestFullScreen()
-                                    : elem.msRequestFullscreen 
-                                    ? elem.msRequestFullscreen()
-                                    : null;
-                                
-                                if (promise) {
-                                    promise.then(() => {
-                                        console.log('✓ Fullscreen activated');
-                                        // Блокуємо орієнтацію в landscape на мобільних
-                                        if (screen.orientation && screen.orientation.lock) {
-                                            screen.orientation.lock('landscape').catch(err => {
-                                                console.log('Orientation lock not supported');
-                                            });
-                                        }
-                                    }).catch(err => {
-                                        console.log('Fullscreen требует пользовательского жеста');
-                                    });
-                                }
-                            };
-                            
-                            // Додаємо слухачі для першого дотику/кліку
-                            document.body.addEventListener('touchstart', enterFullscreen, { once: true });
-                            document.body.addEventListener('click', enterFullscreen, { once: true });
-                        }, 500); // Даємо час на рендеринг
-                    }
-                });
-                
-                panoramaImg.addEventListener('error', function() {
-                    clearTimeout(loadTimeout);
+                    panorama.addEventListener('materialtextureloaded', () => {
+                        clearTimeout(loadTimeout);
+                        document.getElementById('preloader').classList.add('hidden');
+                        console.log('✓ Panorama loaded');
+                    });
+                })
+                .catch(() => {
                     document.getElementById('error').classList.add('show');
                     document.getElementById('error').textContent = `Помилка завантаження фото #${photoId}`;
                     document.getElementById('preloader').classList.add('hidden');
                 });
-            }
-            
-            loadPanorama();
         }
     </script>
 </body>
