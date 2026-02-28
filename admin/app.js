@@ -161,6 +161,7 @@ function renderGallery() {
         gallery.innerHTML = '<p class="gallery-empty">Немає завантажених фото</p>';
         const badge = document.getElementById('galleryCount');
         if (badge) badge.textContent = '0';
+        updateNextPhotoId(); // Set to 1 when no photos
         return;
     }
 
@@ -175,6 +176,20 @@ function renderGallery() {
     });
     const badge = document.getElementById('galleryCount');
     if (badge) badge.textContent = sorted.length;
+    
+    // Auto-update photo ID input to next available number
+    updateNextPhotoId();
+}
+
+function updateNextPhotoId() {
+    const photoIdInput = document.getElementById('photoId');
+    if (!photoIdInput) return;
+    
+    const maxId = uploadedPhotos.length > 0 ? Math.max(...uploadedPhotos.map(p => p.id)) : 0;
+    photoIdInput.value = maxId + 1;
+    
+    const preview = document.getElementById('photoIdPreview');
+    if (preview) preview.textContent = photoIdInput.value;
 }
 
 function createPhotoCard(id, filename) {
@@ -693,12 +708,8 @@ function resetUploadForm() {
     document.getElementById('fileList').classList.remove('active');
     document.getElementById('uploadBtn').disabled = true;
     document.getElementById('uploadBtn').textContent = 'Завантажити';
-
-    // Increment photo ID to next available
-    const maxId = uploadedPhotos.length > 0 ? Math.max(...uploadedPhotos.map(p => p.id)) : 0;
-    const photoIdInput = document.getElementById('photoId');
-    photoIdInput.value = maxId + 1;
-    document.getElementById('photoIdPreview').textContent = photoIdInput.value;
+    
+    // Photo ID is already updated by renderGallery() after upload/delete
 }
 
 // ─── DOMContentLoaded ─────────────────────────────────────────────────────────
