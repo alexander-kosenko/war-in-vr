@@ -9,7 +9,58 @@ const ALLOWED_EMAILS = [
   'vr.livingthewar@gmail.com'
 ];
 
+// Rate limiting config
+const RATE_LIMIT = {
+  IMAGE_REQUESTS_PER_MINUTE: 60,  // max 60 image requests per IP per minute
+  WINDOW_MS: 60000                 // 1 minute window
+};
+
+// In-memory rate limit tracking (resets on Worker restart)
+const rateLimitMap = new Map();
+
 // ── helpers ────────────────────────────────────────────────────────────────────
+
+/**
+ * Simple rate limiter for image requests
+ * Returns true if request should be allowed
+ */
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const key = `img:${ip}`;
+  
+  // Get existing record
+  let record = rateLimitMap.get(key);
+  
+  // Clean up old entries (older than window)
+  if (record && now - record.windowStart > RATE_LIMIT.WINDOW_MS) {
+    record = null;
+  }
+  
+  // Initialize or increment
+  if (!record) {
+    rateLimitMap.set(key, { windowStart: now, count: 1 });
+    return true;
+  }
+  
+  // Check limit
+  if (record.count >= RATE_LIMIT.IMAGE_REQUESTS_PER_MINUTE) {
+    return false;
+  }
+  
+  // Increment counter
+  record.count++;
+  return true;
+}
+
+// Cleanup old entries periodically to prevent memory leak
+function cleanupRateLimitMap() {
+  const now = Date.now();
+  for (const [key, record] of rateLimitMap.entries()) {
+    if (now - record.windowStart > RATE_LIMIT.WINDOW_MS * 2) {
+      rateLimitMap.delete(key);
+    }
+  }
+}
 
 /**
  * Decode JWT token without verification (simplified for private API)
@@ -83,6 +134,26 @@ export default {
       
       // Image proxy endpoint
       if (url.pathname === '/image') {
+        // Rate limiting check
+        const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+        if (!checkRateLimit(clientIP)) {
+          return new Response(JSON.stringify({ 
+            error: 'Too many requests. Please try again later.' 
+          }), {
+            status: 429,
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json',
+              'Retry-After': '60'
+            }
+          });
+        }
+        
+        // Cleanup old rate limit entries occasionally (1% chance)
+        if (Math.random() < 0.01) {
+          cleanupRateLimitMap();
+        }
+        
         const photoId = url.searchParams.get('id');
         const filename = url.searchParams.get('file');
         
