@@ -5,7 +5,11 @@ const CONFIG = {
     UPLOAD_MODE: 'WORKER',
     WORKER_URL: 'https://war-in-vr-upload.vr-livingthewar.workers.dev',
     R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
-    SITE_URL: window.location.origin
+    SITE_URL: window.location.origin,
+    // Whitelist дозволених email адрес (тільки ці акаунти можуть увійти)
+    ALLOWED_EMAILS: [
+        'vr.livingthewar@gmail.com'
+    ]
 };
 
 let selectedFile = null;
@@ -36,6 +40,12 @@ function initGoogleAuth() {
         try {
             const p = parseJwt(saved.credential);
             if (p.exp * 1000 > Date.now()) {
+                // Перевірка доступу
+                if (!isEmailAllowed(p.email)) {
+                    sessionClear();
+                    showAlert('Доступ заборонено. Цей акаунт не має прав адміністратора.', 'error');
+                    return;
+                }
                 currentCredential = saved.credential;
                 showMain(saved.name, saved.email);
                 return;
@@ -55,8 +65,20 @@ function initGoogleAuth() {
 function onGoogleSignIn(response) {
     currentCredential = response.credential;
     const payload = parseJwt(currentCredential);
+    
+    // Перевірка доступу
+    if (!isEmailAllowed(payload.email)) {
+        currentCredential = null;
+        showAlert('Доступ заборонено. Цей Google акаунт (' + payload.email + ') не має прав адміністратора.', 'error');
+        return;
+    }
+    
     sessionSave({ email: payload.email, name: payload.name, credential: currentCredential });
     showMain(payload.name, payload.email);
+}
+
+function isEmailAllowed(email) {
+    return CONFIG.ALLOWED_EMAILS.includes(email.toLowerCase());
 }
 
 function showMain(name, email) {
