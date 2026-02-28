@@ -77,12 +77,51 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // ── GET /photos → scan R2 bucket and return actual list ─────────────────
-    // GET /?id=X returns specific photo info
-    // GET / returns all photos
+    // ── GET /image → proxy image from R2 with CORS headers ──────────────────
     if (request.method === 'GET') {
+      const url = new URL(request.url);
+      
+      // Image proxy endpoint
+      if (url.pathname === '/image') {
+        const photoId = url.searchParams.get('id');
+        const filename = url.searchParams.get('file');
+        
+        if (!photoId || !filename) {
+          return new Response(JSON.stringify({ error: 'Missing id or file parameter' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        try {
+          const bucket = env.R2_BUCKET;
+          const key = `${photoId}/${filename}`;
+          const object = await bucket.get(key);
+          
+          if (!object) {
+            return new Response(JSON.stringify({ error: 'Image not found' }), {
+              status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // Return image with CORS headers
+          const headers = new Headers();
+          object.writeHttpMetadata(headers);
+          headers.set('Access-Control-Allow-Origin', allowedOrigin);
+          headers.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+          headers.set('Vary', 'Origin');
+          
+          return new Response(object.body, { headers });
+        } catch (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+      
+      // ── GET /photos → scan R2 bucket and return actual list ─────────────────
+      // GET /?id=X returns specific photo info
+      // GET / returns all photos
       try {
-        const url = new URL(request.url);
         const photoId = url.searchParams.get('id');
         const bucket = env.R2_BUCKET;
         

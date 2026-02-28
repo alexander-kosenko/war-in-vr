@@ -147,7 +147,6 @@
         }
         
         const photoId = getPhotoId();
-        const R2_URL = 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev';
         const WORKER_URL = 'https://war-in-vr-upload.vr-livingthewar.workers.dev';
         
         if (!photoId) {
@@ -163,7 +162,8 @@
                         throw new Error(data.error || 'Photo not found');
                     }
                     
-                    const panoramaUrl = `${R2_URL}/${photoId}/${data.filename}`;
+                    // Load image through Worker proxy (fixes CORS issues)
+                    const panoramaUrl = `${WORKER_URL}/image?id=${photoId}&file=${encodeURIComponent(data.filename)}`;
                     const panorama = document.getElementById('panorama');
                     
                     document.title = `War in VR - Фото ${photoId}`;
