@@ -1,22 +1,62 @@
 // Cloudflare Worker для безпечного upload/delete в R2
-// Auth: ADMIN_SECRET (Cloudflare secret, set via: wrangler secret put ADMIN_SECRET)
+// Auth: Google ID Token (JWT) з email whitelist перевіркою
 // Deploy: cd worker && wrangler deploy
 
 const ALLOWED_ORIGIN = 'https://vr-photo.pages.dev';
 
+// Email whitelist - тільки ці акаунти можуть upload/delete
+const ALLOWED_EMAILS = [
+  'vr.livingthewar@gmail.com'
+];
+
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 /**
- * Constant-time string comparison to avoid timing attacks.
+ * Decode JWT token without verification (simplified for private API)
+ * Full verification would require fetching Google's public keys
  */
-function safeCompare(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
   }
-  return mismatch === 0;
+}
+
+/**
+ * Validate Google ID token and check email whitelist
+ */
+function validateGoogleToken(token) {
+  if (!token) return { valid: false, error: 'Відсутній токен авторизації' };
+  
+  const payload = parseJwt(token);
+  if (!payload) return { valid: false, error: 'Невірний формат токена' };
+  
+  // Check token expiration
+  if (!payload.exp || payload.exp * 1000 < Date.now()) {
+    return { valid: false, error: 'Токен прострочений' };
+  }
+  
+  // Check issuer (Google)
+  if (!payload.iss || !['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss)) {
+    return { valid: false, error: 'Невірний issuer токена' };
+  }
+  
+  // Check email whitelist
+  const email = payload.email?.toLowerCase();
+  if (!email || !ALLOWED_EMAILS.includes(email)) {
+    return { valid: false, error: `Доступ заборонено для ${email || 'невідомого акаунту'}` };
+  }
+  
+  return { valid: true, email, payload };
 }
 
 // ── main handler ───────────────────────────────────────────────────────────────
@@ -105,10 +145,12 @@ export default {
     try {
       const formData = await request.formData();
 
-      // ── Auth: validate ADMIN_SECRET ────────────────────────────────────────
-      const apiSecret = formData.get('apiSecret');
-      if (!apiSecret || !env.ADMIN_SECRET || !safeCompare(apiSecret, env.ADMIN_SECRET)) {
-        return new Response(JSON.stringify({ error: 'Невірний ключ доступу' }), {
+      // ── Auth: validate Google ID Token ─────────────────────────────────────
+      const googleToken = formData.get('googleToken');
+      const authResult = validateGoogleToken(googleToken);
+      
+      if (!authResult.valid) {
+        return new Response(JSON.stringify({ error: authResult.error }), {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }

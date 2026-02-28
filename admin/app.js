@@ -1,7 +1,6 @@
 // Configuration
 const CONFIG = {
     GOOGLE_CLIENT_ID: '160253975823-l8hvle27hsh4ohboh3pj3kn9j2ilhnm0.apps.googleusercontent.com',
-    ADMIN_SECRET: 'fedf785341de1f3f34c7d702fc7764f1a2917947a0537bcb',
     UPLOAD_MODE: 'WORKER',
     WORKER_URL: 'https://war-in-vr-upload.vr-livingthewar.workers.dev',
     R2_PUBLIC_URL: 'https://pub-21040fd818d4437484f8a3c1ca05743a.r2.dev',
@@ -289,8 +288,9 @@ async function confirmReplace() {
     try {
         if (CONFIG.UPLOAD_MODE === 'WORKER') {
             if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
+            if (!currentCredential) throw new Error('Необхідна авторизація');
             const formData = new FormData();
-            formData.append('apiSecret', CONFIG.ADMIN_SECRET);
+            formData.append('googleToken', currentCredential);
             formData.append('action', 'upload');
             formData.append('sceneId', String(replaceTargetId));
             formData.append('file', replaceFile, `${replaceTargetId}.jpg`);
@@ -338,8 +338,9 @@ async function deletePhoto(id) {
 
     if (CONFIG.UPLOAD_MODE === 'WORKER' && CONFIG.WORKER_URL) {
         try {
+            if (!currentCredential) throw new Error('Необхідна авторизація');
             const formData = new FormData();
-            formData.append('apiSecret', CONFIG.ADMIN_SECRET);
+            formData.append('googleToken', currentCredential);
             formData.append('action', 'delete');
             formData.append('sceneId', String(id));
 
@@ -580,9 +581,10 @@ async function processAndUpload() {
 async function uploadSingleFile(file, photoId) {
     if (CONFIG.UPLOAD_MODE === 'WORKER') {
         if (!CONFIG.WORKER_URL) throw new Error('WORKER_URL не налаштований!');
+        if (!currentCredential) throw new Error('Необхідна авторизація');
 
         const formData = new FormData();
-        formData.append('apiSecret', CONFIG.ADMIN_SECRET);
+        formData.append('googleToken', currentCredential);
         formData.append('action', 'upload');
         formData.append('sceneId', String(photoId));
         formData.append('file', file, file.name); // Keep original filename
